@@ -37,12 +37,14 @@ CASES = [
 ]
 
 
-def faketar_output(flags=(), file="", directory=".", blocking_factor=20, paths=()):
+def faketar_output(flags=(), file="", directory=".", blocking_factor=20, paths=(), exclude=(), checkpoint=()):
     names = ("create", "extract", "list", "verbose", "gzip", "bzip2", "preserve")
     return (
         "".join(f"{name}={name in flags}\n" for name in names)
         + f"file={file}\ndirectory={directory}\nblocking-factor={blocking_factor}\npaths:\n"
         + "".join(f"  {path}\n" for path in paths)
+        + "exclude:\n" + "".join(f"  {pattern}\n" for pattern in exclude)
+        + "checkpoint:\n" + "".join(f"  {number}\n" for number in checkpoint)
     )
 
 
@@ -57,6 +59,12 @@ for tokens in (
     CASES.append(("faketar", tokens, 0, faketar_output(("create", "verbose", "gzip"), "archive.tar"), ""))
 
 CASES += [
+    ("faketar", ["-vXa", "-X=b", "--exclude", "c", "-K1", "-K=2", "--checkpoint", "-3"],
+     0, faketar_output(("verbose",), exclude=("a", "b", "c"), checkpoint=(1, 2, -3)), ""),
+    ("faketar", ["-X="], 0, faketar_output(exclude=("",)), ""),
+    ("faketar", ["-X", "-v"], 0, faketar_output(exclude=("-v",)), ""),
+    ("faketar", ["-K1", "-Kbad"], 2, "", "Invalid integer for checkpoint: bad"),
+    ("text", ["repeat", "hello", "-u"], 2, "", "Missing required parameter: count"),
     ("faketar", ["-cxtvzjpfarchive.tar", "-Ctmp", "-b=32", "src", "README.md"], 0,
      faketar_output(("create", "extract", "list", "verbose", "gzip", "bzip2", "preserve"),
                     "archive.tar", "tmp", 32, ("src", "README.md")), ""),

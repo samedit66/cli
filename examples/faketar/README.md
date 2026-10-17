@@ -43,13 +43,16 @@ starts with `-`. Characters in that value are never interpreted as flags.
 ./build/gobo/faketar -cxtvzjpfarchive.tar -Ctmp -b=32 src README.md
 ./build/gobo/faketar -cvzf archive.tar -- -filename
 ./build/gobo/faketar -fcvz
+./build/gobo/faketar -vXtmp -X=cache -K1 -K=2
 ./build/gobo/faketar --help
 ```
 
 Flags: `-c/--create`, `-x/--extract`, `-t/--list`, `-v/--verbose`,
 `-z/--gzip`, `-j/--bzip2`, `-p/--preserve`.
 Options: `-f/--file` (default empty), `-C/--directory` (default `.`),
-`-b/--blocking-factor` (default `20`). Remaining operands form the `paths` list.
+`-b/--blocking-factor` (default `20`). Repeatable options:
+`-X/--exclude` (strings) and `-K/--checkpoint` (integers), both empty by default.
+Remaining operands form the `paths` list.
 Options may appear between operands. `--` ends option recognition except when
 consumed as an option's value. Invalid input exits with code `2`.
 
@@ -61,6 +64,6 @@ Build `greet`, `text`, and `faketar` with each compiler, then run from the repos
 python3 tests/check_examples.py gobo eiffelstudio
 ```
 
-Additional parser checks cover repeatable options, required values, negative
-integer operands and numeric aliases. From `tests`, run `just gobo` and
-`just eiffelstudio`; each recipe builds and executes these checks.
+All checks run the examples through this single script; there is no separate
+Eiffel test application or test build. Cases cover grouped options, repeated
+string and integer lists, required parameters, negative option values, and errors.

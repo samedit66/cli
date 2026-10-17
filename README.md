@@ -21,7 +21,7 @@ Inspired by Python's [Cleo](https://github.com/python-poetry/cleo).
 
 ## Installation
 
-From your project's root directory:
+From your project's root directory, clone `cli`:
 
 ```sh
 git clone https://github.com/samedit66/cli.git vendor/cli
@@ -235,16 +235,17 @@ handle (a_input: CLI_COMMAND_INPUT)
 `fail` requires a nonzero code. It exits without raising an exception or
 running `rescue`; any work already done is not undone.
 
-## Syntax and limits
+## Limits
 
-- With `CLI_APPLICATION`, the first token selects a command; there are no global options or nested commands.
-- Options accept `--name value` and `--name=value`. Without `=`, an option consumes exactly one following token, even if it starts with `-`.
-- In `--name=value`, only the first `=` separates the name and value; the value may be empty. Flags do not accept values. Parameter names cannot contain `=`.
-- `--` ends option recognition when encountered outside an option's value.
-- Required positional arguments precede optional ones. A positional list must be last.
-- Required lists need at least one value. Only list options may be repeated.
-- **Not currently supported**: `-n=value`, `-nvalue`, combined flags such as `-abc`, and comma-separated lists.
-- Boolean-valued options and boolean lists are **not supported**; use flags instead.
+- No global options or nested commands: `tool --verbose build`, `tool remote add`.
+- No boolean-valued options or boolean lists: `--enabled=false`. Use flags instead.
+- Only list options can be repeated. Repeating a flag (`-vv`) or a single-value option is an error.
+- No comma-separated list parsing: `--port=80,81`. Repeat the option instead.
+- No short-option groups without a leading dash: `cvzf`. Use `-cvzf`.
+- Positional arguments have a fixed order: required first, optional next, a list last.
+
+See [command-line syntax](docs/syntax.md) for accepted forms and parsing rules,
+and [faketar](examples/faketar/README.md) for examples of grouped short options.
 
 ## License
 

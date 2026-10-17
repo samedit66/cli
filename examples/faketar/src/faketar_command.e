@@ -32,6 +32,10 @@ feature -- Definition
             set_short_name ("directory", 'C')
             add_optional_integer_option ("blocking-factor", "Integer to report", 20)
             set_short_name ("blocking-factor", 'b')
+            add_optional_string_list_option ("exclude", "Patterns to report", {ARRAY [STRING_32]} <<>>)
+            set_short_name ("exclude", 'X')
+            add_optional_integer_list_option ("checkpoint", "Checkpoint numbers to report", {ARRAY [INTEGER]} <<>>)
+            set_short_name ("checkpoint", 'K')
             add_optional_string_list_argument ("paths", "Paths to report", {ARRAY [STRING_32]} <<>>)
         end
 
@@ -52,6 +56,14 @@ feature -- Execution
             io.put_string_32 ({STRING_32} "paths:%N")
             across a_input.string_list_parameter ("paths") as path loop
                 io.put_string_32 ({STRING_32} "  " + path + "%N")
+            end
+            io.put_string_32 ({STRING_32} "exclude:%N")
+            across a_input.string_list_parameter ("exclude") as pattern loop
+                io.put_string_32 ({STRING_32} "  " + pattern + "%N")
+            end
+            io.put_string_32 ({STRING_32} "checkpoint:%N")
+            across a_input.integer_list_parameter ("checkpoint") as number loop
+                io.put_string_32 ({STRING_32} "  " + number.out + "%N")
             end
         end
 
