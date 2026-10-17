@@ -27,7 +27,21 @@ feature {NONE} -- Initialization
 feature -- Parsing
 
     parse (a_tokens: READABLE_INDEXABLE [STRING_32])
-            -- Parse once, stopping at the first input error.
+            -- Recognize tokens and validate required parameters.
+        require
+            not_parsed: not is_parsed
+        do
+            parse_tokens (a_tokens)
+            if not has_error then
+                validate_required
+            end
+        ensure
+            parsed: is_parsed
+            outcome: is_successful xor has_error
+        end
+
+    parse_tokens (a_tokens: READABLE_INDEXABLE [STRING_32])
+            -- Recognize tokens without checking required parameters.
             -- Tokens exclude the program and subcommand names.
         require
             not_parsed: not is_parsed
@@ -81,25 +95,41 @@ feature -- Parsing
                 i := i + 1
             end
 
+            is_parsed := True
+        ensure
+            parsed: is_parsed
+            not_validated: not is_validated
+        end
+
+    validate_required
+            -- Check completeness after successful token recognition.
+        require
+            parsed: is_parsed
+            no_error: not has_error
+            not_validated: not is_validated
+        do
             across parameters as p loop
                 if not has_error and then not p.is_optional and then not seen_names.has (p.name) then
                     fail ({STRING_32} "Missing required parameter: " + p.name)
                 end
             end
-
-            is_parsed := True
+            is_validated := True
         ensure
-            parsed: is_parsed
+            validated: is_validated
             outcome: is_successful xor has_error
         end
 
 feature -- Status report
 
     is_parsed: BOOLEAN
+            -- Have tokens been processed?
+
+    is_validated: BOOLEAN
+            -- Have required parameters been checked?
 
     is_successful: BOOLEAN
         do
-            Result := is_parsed and then not has_error
+            Result := is_validated and then not has_error
         end
 
     has_error: BOOLEAN
@@ -109,8 +139,17 @@ feature -- Status report
 
 feature -- Result
 
+    recognized_values: CLI_COMMAND_INPUT
+            -- Recognized values and defaults; required parameters may be absent.
+        require
+            parsed: is_parsed
+            no_error: not has_error
+        do
+            Result := parsed_values
+        end
+
     values: CLI_COMMAND_INPUT
-            -- Complete values; no partial result is exposed.
+            -- Values after successful required-parameter validation.
         require
             successful: is_successful
         do

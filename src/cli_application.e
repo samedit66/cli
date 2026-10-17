@@ -62,7 +62,7 @@ feature -- Help
             create Result.make_empty
             across commands as c loop
                 if c.name.same_string (a_name) then
-                    Result := c.help (name)
+                    Result := c.help (name + " " + c.name)
                 end
             end
         end

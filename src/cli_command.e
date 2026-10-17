@@ -13,7 +13,7 @@ feature -- Definition
         deferred
         end
 
-feature {CLI_APPLICATION} -- Interface definition
+feature {CLI_APPLICATION, CLI_SINGLE_COMMAND_APPLICATION} -- Interface definition
 
     interface
             -- Declare arguments, options, and flags.
@@ -240,13 +240,13 @@ feature -- Short name availability
 
 feature -- Help
 
-    help (a_application_name: STRING_32): STRING_32
-            -- Fresh help derived from the parameter definitions.
+    help (a_invocation: STRING_32): STRING_32
+            -- Fresh help using the complete invocation, including any subcommand name.
         local
             l_has_options: BOOLEAN
         do
-            Result := a_application_name + " " + name + " - " + description +
-                "%N%NUsage:%N  " + a_application_name + " " + name
+            Result := a_invocation + " - " + description +
+                "%N%NUsage:%N  " + a_invocation
             across parameters as p loop
                 if p.kind = p.Argument_kind then
                     if p.is_optional then
@@ -277,7 +277,7 @@ feature -- Execution
         deferred
         end
 
-feature {CLI_APPLICATION} -- Parameter definitions
+feature {CLI_APPLICATION, CLI_SINGLE_COMMAND_APPLICATION} -- Parameter definitions
 
     parameters: ARRAYED_LIST [CLI_PARAMETER]
             -- Definitions in declaration order; each command owns its list.
