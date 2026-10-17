@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-23-0"
+        name="greet" uuid="56E55E55-C6F6-49E0-9D89-570E24D4771E">
+    <target name="greet">
+        <root class="GREET_APPLICATION" feature="make"/>
+        <option>
+            <assertions precondition="true" supplier_precondition="true"/>
+        </option>
+        <capability>
+            <void_safety support="all" use="all"/>
+        </capability>
+        <setting name="console_application" value="true"/>
+        <library name="cli" readonly="false" location="../../cli.ecf"/>
+        <library name="gobo_free_elks" location="${GOBO}/library/free_elks/library_${GOBO_EIFFEL}.ecf">
+            <condition><custom name="GOBO_EIFFEL" value="ge"/></condition>
+        </library>
+        <library name="ise_base" location="$ISE_LIBRARY/library/base/base.ecf">
+            <condition><custom name="GOBO_EIFFEL" excluded_value="ge"/></condition>
+        </library>
+        <cluster name="greet" location="src" recursive="false"/>
+    </target>
+</system>
