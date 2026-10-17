@@ -1,0 +1,13 @@
+# Build with EiffelStudio. Requires ec and ISE_LIBRARY.
+eiffelstudio:
+    mkdir -p build/eiffelstudio
+    GOBO_EIFFEL=ise ec -batch -config faketar.ecf -target faketar -project_path build/eiffelstudio -freeze -c_compile
+    cp build/eiffelstudio/EIFGENs/faketar/W_code/faketar build/eiffelstudio/faketar
+
+# Build with Gobo. Requires gec and GOBO.
+gobo:
+    #!/usr/bin/env sh
+    set -eu
+    mkdir -p build/gobo
+    cd build/gobo
+    GOBO_EIFFEL=ge gec ../../faketar.ecf

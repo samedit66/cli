@@ -50,6 +50,7 @@ feature -- Parsing
             l_options_finished: BOOLEAN
             l_token, l_option_token: STRING_32
             l_parameter: detachable CLI_PARAMETER
+            l_next_token, l_inline_value: detachable STRING_32
         do
             initialize_defaults
 
@@ -75,28 +76,25 @@ feature -- Parsing
                         end
                         l_parameter := named_parameter (l_option_token)
                     end
+                    next_token_consumed := False
+                    l_next_token := Void
+                    l_inline_value := Void
+                    if i < a_tokens.upper then
+                        l_next_token := a_tokens [i + 1]
+                    end
                     if attached l_parameter as p then
-                        if seen_names.has (p.name) and then not p.is_multiple then
-                            fail ({STRING_32} "Repeated parameter: " + p.name)
-                        elseif p.kind = p.Flag_kind then
-                            if l_equals_position > 0 then
-                                fail ({STRING_32} "Flag does not accept a value: " + l_option_token)
-                            else
-                                parsed_values.put_boolean (p.name, True)
-                                seen_names.force (True, p.name.twin)
-                            end
-                        elseif l_equals_position > 0 then
-                            store_value (p, l_token.substring (l_equals_position + 1, l_token.count))
-                        elseif i = a_tokens.upper then
-                            fail ({STRING_32} "Missing value for option: " + l_token)
-                        else
-                            i := i + 1
-                            store_value (p, a_tokens [i])
+                        if l_equals_position > 0 then
+                            l_inline_value := l_token.substring (l_equals_position + 1, l_token.count)
                         end
+                        parse_named_parameter (p, l_option_token, l_inline_value, l_next_token)
                     elseif not l_options_finished and then is_option_token (l_token) and then
                         not is_negative_integer_argument (l_token, l_position)
                     then
-                        fail ({STRING_32} "Unknown option: " + l_token)
+                        if l_token.starts_with ("--") then
+                            fail ({STRING_32} "Unknown option: " + l_token)
+                        else
+                            parse_short_options (l_token, l_next_token)
+                        end
                     elseif l_position > positional_parameters.count then
                         fail ({STRING_32} "Unexpected argument: " + l_token)
                     else
@@ -104,6 +102,9 @@ feature -- Parsing
                         if not positional_parameters [l_position].is_multiple then
                             l_position := l_position + 1
                         end
+                    end
+                    if next_token_consumed then
+                        i := i + 1
                     end
                 end
                 i := i + 1
@@ -209,6 +210,65 @@ feature {NONE} -- Implementation
                         parsed_values.put_string (p.name, p.string_default)
                     end
                 end
+            end
+        end
+
+    next_token_consumed: BOOLEAN
+            -- Did the last named option consume the following token?
+
+    parse_short_options (a_token: STRING_32; a_next_token: detachable STRING_32)
+            -- Read flags left to right. A value option takes the entire remainder,
+            -- stripping one leading '='; without a remainder it takes the next token.
+        require
+            short_token: a_token.count > 1 and then a_token [1] = '-' and then a_token [2] /= '-'
+        local
+            i: INTEGER
+            l_option_token: STRING_32
+            l_inline_value: detachable STRING_32
+            l_finished: BOOLEAN
+        do
+            from i := 2 until i > a_token.count or l_finished or has_error loop
+                l_option_token := {STRING_32} "-" + a_token.substring (i, i)
+                if attached named_parameter (l_option_token) as p then
+                    l_inline_value := Void
+                    if i < a_token.count and then a_token [i + 1] = '=' then
+                        l_inline_value := a_token.substring (i + 2, a_token.count)
+                        l_finished := True
+                    elseif p.kind /= p.Flag_kind then
+                        if i < a_token.count then
+                            l_inline_value := a_token.substring (i + 1, a_token.count)
+                        end
+                        l_finished := True
+                    end
+                    parse_named_parameter (p, l_option_token, l_inline_value, a_next_token)
+                else
+                    fail ({STRING_32} "Unknown option: " + l_option_token)
+                end
+                i := i + 1
+            end
+        end
+
+    parse_named_parameter (a_parameter: CLI_PARAMETER; a_option_token: STRING_32;
+        a_inline_value, a_next_token: detachable STRING_32)
+            -- Store one option occurrence, sharing validation across all spellings.
+        do
+            next_token_consumed := False
+            if seen_names.has (a_parameter.name) and then not a_parameter.is_multiple then
+                fail ({STRING_32} "Repeated parameter: " + a_parameter.name)
+            elseif a_parameter.kind = a_parameter.Flag_kind then
+                if a_inline_value /= Void then
+                    fail ({STRING_32} "Flag does not accept a value: " + a_option_token)
+                else
+                    parsed_values.put_boolean (a_parameter.name, True)
+                    seen_names.force (True, a_parameter.name.twin)
+                end
+            elseif attached a_inline_value as l_value then
+                store_value (a_parameter, l_value)
+            elseif attached a_next_token as l_next_value then
+                next_token_consumed := True
+                store_value (a_parameter, l_next_value)
+            else
+                fail ({STRING_32} "Missing value for option: " + a_option_token)
             end
         end
 

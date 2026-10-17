@@ -17,7 +17,7 @@ CASES = [
     ("greet", ["--yell=true"], 2, "", "Flag does not accept a value: --yell"),
     ("greet", ["--help="], 2, "", "Flag does not accept a value: --help"),
     ("greet", ["--unknown=x"], 2, "", "Unknown option: --unknown=x"),
-    ("greet", ["-p=Hi"], 2, "", "Unknown option: -p=Hi"),
+    ("greet", ["-p=Hi"], 0, "Hi, world!\n", ""),
     ("text", ["join", "a", "b", "--separator=-", "--upper"], 0, "A-B\n", ""),
     ("text", ["join", "a", "b", "--separator="], 0, "ab\n", ""),
     ("text", ["join", "a", "b", "--separator=a=b"], 0, "aa=bb\n", ""),
@@ -36,6 +36,59 @@ CASES = [
     ("text", ["join", "a", "--unknown=x"], 2, "", "Unknown option: --unknown=x"),
 ]
 
+
+def faketar_output(flags=(), file="", directory=".", blocking_factor=20, paths=()):
+    names = ("create", "extract", "list", "verbose", "gzip", "bzip2", "preserve")
+    return (
+        "".join(f"{name}={name in flags}\n" for name in names)
+        + f"file={file}\ndirectory={directory}\nblocking-factor={blocking_factor}\npaths:\n"
+        + "".join(f"  {path}\n" for path in paths)
+    )
+
+
+for tokens in (
+    ["-c", "-v", "-z", "-f", "archive.tar"],
+    ["-cvz", "-f=archive.tar"],
+    ["-cvzfarchive.tar"],
+    ["-cvzf=archive.tar"],
+    ["-cvzf", "archive.tar"],
+    ["--create", "--verbose", "--gzip", "--file=archive.tar"],
+):
+    CASES.append(("faketar", tokens, 0, faketar_output(("create", "verbose", "gzip"), "archive.tar"), ""))
+
+CASES += [
+    ("faketar", ["-cxtvzjpfarchive.tar", "-Ctmp", "-b=32", "src", "README.md"], 0,
+     faketar_output(("create", "extract", "list", "verbose", "gzip", "bzip2", "preserve"),
+                    "archive.tar", "tmp", 32, ("src", "README.md")), ""),
+    ("faketar", ["-fcvz"], 0, faketar_output(file="cvz"), ""),
+    ("faketar", ["-f="], 0, faketar_output(), ""),
+    ("faketar", ["-f==name"], 0, faketar_output(file="=name"), ""),
+    ("faketar", ["-f=a=b"], 0, faketar_output(file="a=b"), ""),
+    ("faketar", ["-f", "--", "-v"], 0, faketar_output(("verbose",), "--"), ""),
+    ("faketar", ["--", "-cvz", "-f=x"], 0, faketar_output(paths=("-cvz", "-f=x")), ""),
+    ("faketar", ["a", "-cv", "b"], 0, faketar_output(("create", "verbose"), paths=("a", "b")), ""),
+    ("faketar", ["-b-3"], 0, faketar_output(blocking_factor=-3), ""),
+    ("faketar", ["-cb=-3"], 0, faketar_output(("create",), blocking_factor=-3), ""),
+    ("faketar", ["-b", "-3"], 0, faketar_output(blocking_factor=-3), ""),
+    ("faketar", ["-f", "--help"], 0, faketar_output(file="--help"), ""),
+    ("faketar", ["-f", ""], 0, faketar_output(), ""),
+    ("faketar", ["-"], 0, faketar_output(paths=("-",)), ""),
+    ("faketar", ["cvzf"], 0, faketar_output(paths=("cvzf",)), ""),
+    ("faketar", ["-cvQ"], 2, "", "Unknown option: -Q"),
+    ("faketar", ["-vv"], 2, "", "Repeated parameter: verbose"),
+    ("faketar", ["-cv", "--verbose"], 2, "", "Repeated parameter: verbose"),
+    ("faketar", ["-cv=yes"], 2, "", "Flag does not accept a value: -v"),
+    ("faketar", ["-v="], 2, "", "Flag does not accept a value: -v"),
+    ("faketar", ["-cvf"], 2, "", "Missing value for option: -f"),
+    ("faketar", ["-cb="], 2, "", "Invalid integer for blocking-factor:"),
+    ("faketar", ["-cbxyz"], 2, "", "Invalid integer for blocking-factor: xyz"),
+    ("faketar", ["-b2147483648"], 2, "", "Invalid integer for blocking-factor: 2147483648"),
+    ("faketar", ["-fx", "--file=y"], 2, "", "Repeated parameter: file"),
+    ("faketar", ["--help", "-vv"], 2, "", "Repeated parameter: verbose"),
+    ("greet", ["Alice", "-ypHi"], 0, "HI, ALICE!\n", ""),
+    ("text", ["repeat", "hello", "-un2"], 0, "HELLO\nHELLO\n", ""),
+]
+
 for compiler in sys.argv[1:] or ["gobo", "eiffelstudio"]:
     for example, tokens, code, stdout, error in CASES:
         executable = ROOT / "examples" / example / "build" / compiler / example
@@ -45,3 +98,11 @@ for compiler in sys.argv[1:] or ["gobo", "eiffelstudio"]:
         if not error:
             assert not result.stderr, (compiler, example, tokens, result.stderr)
     print(f"{compiler}: {len(CASES)} checks passed")
+
+    result = subprocess.run(
+        [str(ROOT / "examples/faketar/build" / compiler / "faketar"), "--help"],
+        capture_output=True, text=True, timeout=10,
+    )
+    assert result.returncode == 0 and not result.stderr, (compiler, result)
+    assert "first value option takes the entire" in result.stdout, (compiler, result.stdout)
+    assert "-fcvz sets file=cvz" in result.stdout, (compiler, result.stdout)
