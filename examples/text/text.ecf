@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-23-0"
+        name="text" uuid="72C29D03-9C62-4EEB-A81C-17B6B155A59D">
+    <target name="text">
+        <root class="TEXT_APPLICATION" feature="make"/>
+        <option>
+            <assertions precondition="true" supplier_precondition="true"/>
+        </option>
+        <capability>
+            <void_safety support="all" use="all"/>
+        </capability>
+        <setting name="console_application" value="true"/>
+        <library name="cli" location="../../cli.ecf"/>
+        <library name="gobo_free_elks" location="${GOBO}/library/free_elks/library_${GOBO_EIFFEL}.ecf">
+            <condition><custom name="GOBO_EIFFEL" value="ge"/></condition>
+        </library>
+        <library name="ise_base" location="$ISE_LIBRARY/library/base/base.ecf">
+            <condition><custom name="GOBO_EIFFEL" excluded_value="ge"/></condition>
+        </library>
+        <cluster name="text" location="src" recursive="false"/>
+    </target>
+</system>

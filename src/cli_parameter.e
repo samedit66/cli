@@ -1,0 +1,290 @@
+class
+    CLI_PARAMETER
+
+create
+    make_integer_argument,
+    make_optional_integer_argument,
+    make_integer_option,
+    make_optional_integer_option,
+    make_string_argument,
+    make_optional_string_argument,
+    make_string_option,
+    make_optional_string_option,
+    make_flag,
+    make_integer_list_argument,
+    make_optional_integer_list_argument,
+    make_integer_list_option,
+    make_optional_integer_list_option,
+    make_string_list_argument,
+    make_optional_string_list_argument,
+    make_string_list_option,
+    make_optional_string_list_option
+
+feature {NONE} -- Initialization
+
+    make_integer_argument (a_name, a_description: STRING_32)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            name := a_name.twin
+            description := a_description.twin
+            create string_default.make_empty
+            kind := Argument_kind
+            value_type := Integer_type
+            is_optional := False
+        end
+
+    make_optional_integer_argument (a_name, a_description: STRING_32; a_default: INTEGER)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            name := a_name.twin
+            description := a_description.twin
+            create string_default.make_empty
+            kind := Argument_kind
+            value_type := Integer_type
+            is_optional := True
+            integer_default := a_default
+        end
+
+    make_integer_option (a_name, a_description: STRING_32)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            name := a_name.twin
+            description := a_description.twin
+            create string_default.make_empty
+            kind := Option_kind
+            value_type := Integer_type
+            is_optional := False
+        end
+
+    make_optional_integer_option (a_name, a_description: STRING_32; a_default: INTEGER)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            name := a_name.twin
+            description := a_description.twin
+            create string_default.make_empty
+            kind := Option_kind
+            value_type := Integer_type
+            is_optional := True
+            integer_default := a_default
+        end
+
+    make_string_argument (a_name, a_description: STRING_32)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            name := a_name.twin
+            description := a_description.twin
+            create string_default.make_empty
+            kind := Argument_kind
+            value_type := String_type
+            is_optional := False
+        end
+
+    make_optional_string_argument (a_name, a_description: STRING_32; a_default: STRING_32)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            name := a_name.twin
+            description := a_description.twin
+            create string_default.make_empty
+            kind := Argument_kind
+            value_type := String_type
+            is_optional := True
+            string_default := a_default.twin
+        end
+
+    make_string_option (a_name, a_description: STRING_32)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            name := a_name.twin
+            description := a_description.twin
+            create string_default.make_empty
+            kind := Option_kind
+            value_type := String_type
+            is_optional := False
+        end
+
+    make_optional_string_option (a_name, a_description: STRING_32; a_default: STRING_32)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            name := a_name.twin
+            description := a_description.twin
+            create string_default.make_empty
+            kind := Option_kind
+            value_type := String_type
+            is_optional := True
+            string_default := a_default.twin
+        end
+
+    make_flag (a_name, a_description: STRING_32)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            name := a_name.twin
+            description := a_description.twin
+            create string_default.make_empty
+            kind := Flag_kind
+            value_type := Boolean_type
+            is_optional := True
+        end
+
+    make_integer_list_argument (a_name, a_description: STRING_32)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            make_integer_argument (a_name, a_description)
+            is_multiple := True
+        end
+
+    make_optional_integer_list_argument (a_name, a_description: STRING_32; a_default: ITERABLE [INTEGER])
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            make_optional_integer_argument (a_name, a_description, 0)
+            is_multiple := True
+            across a_default as value loop
+                integer_list_default.extend (value)
+            end
+        end
+
+    make_integer_list_option (a_name, a_description: STRING_32)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            make_integer_option (a_name, a_description)
+            is_multiple := True
+        end
+
+    make_optional_integer_list_option (a_name, a_description: STRING_32; a_default: ITERABLE [INTEGER])
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            make_optional_integer_option (a_name, a_description, 0)
+            is_multiple := True
+            across a_default as value loop
+                integer_list_default.extend (value)
+            end
+        end
+
+    make_string_list_argument (a_name, a_description: STRING_32)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            make_string_argument (a_name, a_description)
+            is_multiple := True
+        end
+
+    make_optional_string_list_argument (a_name, a_description: STRING_32; a_default: ITERABLE [STRING_32])
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            make_optional_string_argument (a_name, a_description, "")
+            is_multiple := True
+            across a_default as value loop
+                string_list_default.extend (value.twin)
+            end
+        end
+
+    make_string_list_option (a_name, a_description: STRING_32)
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            make_string_option (a_name, a_description)
+            is_multiple := True
+        end
+
+    make_optional_string_list_option (a_name, a_description: STRING_32; a_default: ITERABLE [STRING_32])
+        require
+            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.starts_with ("-")
+        do
+            make_optional_string_option (a_name, a_description, "")
+            is_multiple := True
+            across a_default as value loop
+                string_list_default.extend (value.twin)
+            end
+        end
+
+feature -- Access
+
+    name: STRING_32
+
+    description: STRING_32
+
+    kind: INTEGER
+
+    value_type: INTEGER
+
+    is_optional: BOOLEAN
+
+    is_multiple: BOOLEAN
+            -- Does this parameter collect a sequence of values?
+
+    has_short_name: BOOLEAN
+
+    short_name: CHARACTER_32
+
+    integer_default: INTEGER
+            -- Default for an optional integer parameter.
+
+    string_default: STRING_32
+            -- Default for an optional string parameter.
+
+    integer_list_default: ARRAYED_LIST [INTEGER]
+        attribute
+            create Result.make (Default_capacity)
+        end
+
+    string_list_default: ARRAYED_LIST [STRING_32]
+        attribute
+            create Result.make (Default_capacity)
+        end
+
+feature {NONE} -- Capacity
+
+    Default_capacity: INTEGER = 4
+
+feature {CLI_COMMAND} -- Short name assignment
+
+    set_short_name (a_short_name: CHARACTER_32)
+            -- Assign a short name during command definition.
+        require
+            option_or_flag: kind /= Argument_kind
+            not_assigned: not has_short_name
+            valid_short_name: a_short_name.is_alpha or else a_short_name.is_digit
+        do
+            short_name := a_short_name
+            has_short_name := True
+        ensure
+            assigned: has_short_name
+            short_name_set: short_name = a_short_name
+        end
+
+feature -- Kinds
+
+    Argument_kind: INTEGER = unique
+    Option_kind: INTEGER = unique
+    Flag_kind: INTEGER = unique
+
+feature -- Value types
+
+    Integer_type: INTEGER = unique
+    String_type: INTEGER = unique
+    Boolean_type: INTEGER = unique
+
+invariant
+    no_flag_lists: is_multiple implies kind /= Flag_kind
+    non_empty_name: not name.is_empty
+    valid_kind: kind = Argument_kind or kind = Option_kind or kind = Flag_kind
+    valid_type: value_type = Integer_type or value_type = String_type or value_type = Boolean_type
+    boolean_is_flag: (value_type = Boolean_type) = (kind = Flag_kind)
+    optional_flag: kind = Flag_kind implies is_optional
+    short_name_for_option_or_flag: has_short_name implies kind /= Argument_kind
+    valid_short_name: has_short_name implies (short_name.is_alpha or else short_name.is_digit)
+
+end
