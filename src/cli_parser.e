@@ -46,9 +46,9 @@ feature -- Parsing
         require
             not_parsed: not is_parsed
         local
-            i, l_position: INTEGER
+            i, l_position, l_equals_position: INTEGER
             l_options_finished: BOOLEAN
-            l_token: STRING_32
+            l_token, l_option_token: STRING_32
             l_parameter: detachable CLI_PARAMETER
         do
             initialize_defaults
@@ -64,15 +64,29 @@ feature -- Parsing
                     l_options_finished := True
                 else
                     l_parameter := Void
+                    l_equals_position := 0
+                    l_option_token := l_token
                     if not l_options_finished then
-                        l_parameter := named_parameter (l_token)
+                        if l_token.count > 2 and then l_token.starts_with ("--") then
+                            l_equals_position := l_token.index_of ('=', 3)
+                            if l_equals_position > 0 then
+                                l_option_token := l_token.substring (1, l_equals_position - 1)
+                            end
+                        end
+                        l_parameter := named_parameter (l_option_token)
                     end
                     if attached l_parameter as p then
                         if seen_names.has (p.name) and then not p.is_multiple then
                             fail ({STRING_32} "Repeated parameter: " + p.name)
                         elseif p.kind = p.Flag_kind then
-                            parsed_values.put_boolean (p.name, True)
-                            seen_names.force (True, p.name.twin)
+                            if l_equals_position > 0 then
+                                fail ({STRING_32} "Flag does not accept a value: " + l_option_token)
+                            else
+                                parsed_values.put_boolean (p.name, True)
+                                seen_names.force (True, p.name.twin)
+                            end
+                        elseif l_equals_position > 0 then
+                            store_value (p, l_token.substring (l_equals_position + 1, l_token.count))
                         elseif i = a_tokens.upper then
                             fail ({STRING_32} "Missing value for option: " + l_token)
                         else

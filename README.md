@@ -238,11 +238,12 @@ running `rescue`; any work already done is not undone.
 ## Syntax and limits
 
 - With `CLI_APPLICATION`, the first token selects a command; there are no global options or nested commands.
-- An option consumes exactly one following token, even if it starts with `-`.
+- Options accept `--name value` and `--name=value`. Without `=`, an option consumes exactly one following token, even if it starts with `-`.
+- In `--name=value`, only the first `=` separates the name and value; the value may be empty. Flags do not accept values. Parameter names cannot contain `=`.
 - `--` ends option recognition when encountered outside an option's value.
 - Required positional arguments precede optional ones. A positional list must be last.
 - Required lists need at least one value. Only list options may be repeated.
-- **Not currently supported**: `--name=value`, `-nvalue`, combined flags such as `-abc`, and comma-separated lists.
+- **Not currently supported**: `-n=value`, `-nvalue`, combined flags such as `-abc`, and comma-separated lists.
 - Boolean-valued options and boolean lists are **not supported**; use flags instead.
 
 ## License

@@ -20,6 +20,7 @@ just eiffelstudio
 ./build/gobo/greet                         # Hello, world!
 ./build/gobo/greet Alice                   # Hello, Alice!
 ./build/gobo/greet Alice --yell            # HELLO, ALICE!
+./build/gobo/greet Alice --prefix=Hi       # Hi, Alice!
 ./build/gobo/greet Alice -p Hi -y          # HI, ALICE!
 ./build/gobo/greet --help                  # Generated help
 ./build/gobo/greet help                    # Hello, help!

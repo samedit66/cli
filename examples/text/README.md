@@ -26,7 +26,7 @@ Each recipe selects the standard library through `GOBO_EIFFEL`.
 ./build/gobo/text join hello world -s "-" -u
 # HELLO-WORLD
 
-./build/gobo/text repeat hello --count 3 --prefix "> "
+./build/gobo/text repeat hello --count=3 --prefix="> "
 # > hello
 # > hello
 # > hello
