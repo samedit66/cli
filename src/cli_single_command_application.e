@@ -1,5 +1,11 @@
 class
     CLI_SINGLE_COMMAND_APPLICATION
+
+inherit
+    CLI_FAILURE
+        export
+            {NONE} fail
+        end
         -- Runs one command directly. Adds a help flag to its parameters only
         -- when no parameter named "help" exists; existing help belongs to the command.
 
@@ -36,11 +42,9 @@ feature -- Help
 
 feature -- Execution
 
-    has_error: BOOLEAN
-            -- Did parsing fail? Reset at the beginning of each run.
-
     run
             -- Execute using process arguments, excluding the executable name.
+            -- Invalid calls terminate the process with {CLI_COMMAND}.Invalid_call.
         local
             l_arguments: ARGUMENTS_32
             l_tokens: ARRAYED_LIST [STRING_32]
@@ -57,10 +61,10 @@ feature -- Execution
 
     run_with_tokens (a_tokens: READABLE_INDEXABLE [STRING_32])
             -- Parse tokens directly, handling an application-added help flag first.
+            -- Invalid calls terminate the process with {CLI_COMMAND}.Invalid_call.
         local
             l_parser: CLI_PARSER
         do
-            has_error := False
             create l_parser.make (command.parameters)
             l_parser.parse_tokens (a_tokens)
             if not l_parser.has_error then
@@ -74,8 +78,7 @@ feature -- Execution
                 end
             end
             if l_parser.has_error then
-                has_error := True
-                io.error.put_string_32 (l_parser.error_message + "%NRun '" + name + " --help' for usage.%N")
+                fail (l_parser.error_message + "%NRun '" + name + " --help' for usage.", {CLI_COMMAND}.Invalid_call)
             end
         end
 

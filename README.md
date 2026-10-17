@@ -207,6 +207,34 @@ reported before the handler is called.
 See [CLI_COMMAND](src/cli_command.e) for parameter declarations and
 [CLI_COMMAND_INPUT](src/cli_command_input.e) for typed value access.
 
+## Errors
+
+Invalid commands or arguments print an error to standard error and exit with
+code `2`. This applies to both `run` and `run_with_tokens`.
+
+Use `fail` inside `handle` to print an error and stop the program immediately:
+
+```eiffel
+handle (a_input: CLI_COMMAND_INPUT)
+    local
+        count: INTEGER
+    do
+        count := a_input.integer_parameter ("count")
+        if count < 0 then
+            fail ("Count must be zero or greater.", Invalid_call)
+        end
+        -- Continue only when count is valid.
+    end
+```
+
+`CLI_COMMAND` provides two numeric exit-code constants:
+
+- `Command_error = 1`: the command could not complete its work.
+- `Invalid_call = 2`: the command or its arguments are invalid.
+
+`fail` requires a nonzero code. It exits without raising an exception or
+running `rescue`; any work already done is not undone.
+
 ## Syntax and limits
 
 - With `CLI_APPLICATION`, the first token selects a command; there are no global options or nested commands.

@@ -27,13 +27,10 @@ feature -- Execution
         local
             count, i: INTEGER
             text, line: STRING_32
-            exceptions: EXCEPTIONS
         do
             count := a_input.integer_parameter ("count")
             if count < 0 then
-                io.error.put_string_32 ("Count must be zero or greater.%N")
-                create exceptions
-                exceptions.die (2)
+                fail ("Count must be zero or greater.", Invalid_call)
             else
                 text := a_input.string_parameter ("text")
                 if a_input.boolean_parameter ("upper") then

@@ -1,6 +1,12 @@
 class
     CLI_APPLICATION
 
+inherit
+    CLI_FAILURE
+        export
+            {NONE} fail
+        end
+
 create
     make
 
@@ -81,12 +87,9 @@ feature -- Help
 
 feature -- Execution
 
-    has_error: BOOLEAN
-            -- Did command selection, parsing, or help lookup fail?
-            -- False initially; reset at the beginning of each run.
-
     run
             -- Execute using process arguments, excluding the executable name.
+            -- Invalid calls terminate the process with {CLI_COMMAND}.Invalid_call.
         local
             l_arguments: ARGUMENTS_32
             l_tokens: ARRAYED_LIST [STRING_32]
@@ -104,13 +107,13 @@ feature -- Execution
 
     run_with_tokens (a_tokens: READABLE_INDEXABLE [STRING_32])
             -- Select and execute a command. Tokens exclude the executable name.
+            -- Invalid calls terminate the process with {CLI_COMMAND}.Invalid_call.
         local
             l_command: detachable CLI_COMMAND
             l_tokens: ARRAYED_LIST [STRING_32]
             l_parser: CLI_PARSER
             i: INTEGER
         do
-            has_error := False
             if a_tokens.lower > a_tokens.upper then
                 show_help ("")
             else
@@ -150,8 +153,9 @@ feature {NONE} -- Implementation
 
     report_error (a_message: STRING_32)
         do
-            has_error := True
-            io.error.put_string_32 (a_message + "%N")
+            fail (a_message, {CLI_COMMAND}.Invalid_call)
+        ensure
+            never_returns: False
         end
 
 feature {NONE} -- Capacity

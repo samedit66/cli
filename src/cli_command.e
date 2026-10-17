@@ -1,6 +1,12 @@
 deferred class
     CLI_COMMAND
 
+inherit
+    CLI_FAILURE
+        export
+            {ANY} fail
+        end
+
 feature -- Definition
 
     name: STRING_32
@@ -276,6 +282,14 @@ feature -- Execution
             -- Execute the command using successfully parsed values.
         deferred
         end
+
+feature -- Failure
+
+    Command_error: INTEGER = 1
+            -- Command execution failed.
+
+    Invalid_call: INTEGER = 2
+            -- Command selection or arguments are invalid.
 
 feature {CLI_APPLICATION, CLI_SINGLE_COMMAND_APPLICATION} -- Parameter definitions
 
