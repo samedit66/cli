@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-23-0"
+        name="arc" uuid="62C79B85-EABC-40EA-92BF-F783CD624F2E">
+    <target name="arc">
+        <root class="ARC_APPLICATION" feature="make"/>
+        <option>
+            <assertions precondition="true" supplier_precondition="true"/>
+        </option>
+        <capability>
+            <void_safety support="all" use="all"/>
+        </capability>
+        <setting name="console_application" value="true"/>
+        <library name="cli" readonly="false" location="../../cli.ecf"/>
+        <library name="gobo_free_elks" location="${GOBO}/library/free_elks/library_${GOBO_EIFFEL}.ecf">
+            <condition><custom name="GOBO_EIFFEL" value="ge"/></condition>
+        </library>
+        <library name="ise_base" location="$ISE_LIBRARY/library/base/base.ecf">
+            <condition><custom name="GOBO_EIFFEL" excluded_value="ge"/></condition>
+        </library>
+        <cluster name="arc" location="src" recursive="false"/>
+    </target>
+</system>

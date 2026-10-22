@@ -13,6 +13,7 @@ feature {NONE} -- Entry point
             create application.make ("text", "Join and repeat text")
             application.add_command (create {JOIN_COMMAND})
             application.add_command (create {REPEAT_COMMAND})
+            application.add_command (create {CLI_HELP_COMMAND}.make (application))
             application.run
         end
 

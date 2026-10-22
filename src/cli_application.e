@@ -15,14 +15,10 @@ feature {NONE} -- Initialization
     make (a_name, a_description: STRING_32)
         require
             non_empty_name: not a_name.is_empty
-        local
-            l_help: CLI_HELP_COMMAND
         do
             name := a_name.twin
             description := a_description.twin
             create commands.make (Default_capacity)
-            create l_help.make (Current)
-            add_command (l_help)
         end
 
 feature -- Definition
@@ -34,7 +30,11 @@ feature -- Definition
     add_command (a_command: CLI_COMMAND)
             -- Register a command and declare its interface.
         require
-            non_empty_name: not a_command.name.is_empty
+            canonical_name: not a_command.name.starts_with (" ") and then
+                not a_command.name.ends_with (" ") and then not a_command.name.has_substring ("  ") and then
+                not a_command.name.has ('%T') and then not a_command.name.has ('%N') and then
+                not a_command.name.has ('%R')
+            no_option_words: across a_command.name.split (' ') as word all not word.starts_with ("-") end
             unique_name: not has_command (a_command.name)
         do
             a_command.interface
@@ -53,12 +53,20 @@ feature -- Help
     help: STRING_32
             -- Fresh application help, in command registration order.
         do
-            Result := name + " - " + description + "%N%NUsage:%N  " + name +
-                " <command> [arguments and options]%N%NCommands:%N"
-            across commands as c loop
-                Result.append ({STRING_32} "  " + c.name + "  " + c.description + "%N")
+            Result := name + " - " + description + "%N%NUsage:%N  " + name
+            if has_command ("") then
+                Result.append (" [command]")
+            else
+                Result.append (" <command>")
             end
-            Result.append ({STRING_32} "%NRun '" + name + " help <command>' for command help.%N")
+            Result.append (" [arguments and options]%N%NCommands:%N")
+            across commands as c loop
+                if c.name.is_empty then
+                    Result.append ({STRING_32} "  (default)  " + c.description + "%N")
+                else
+                    Result.append ({STRING_32} "  " + c.name + "  " + c.description + "%N")
+                end
+            end
         end
 
     command_help (a_name: STRING_32): STRING_32
@@ -68,7 +76,11 @@ feature -- Help
             create Result.make_empty
             across commands as c loop
                 if c.name.same_string (a_name) then
-                    Result := c.help (name + " " + c.name)
+                    if c.name.is_empty then
+                        Result := c.help (name)
+                    else
+                        Result := c.help (name + " " + c.name)
+                    end
                 end
             end
         end
@@ -109,46 +121,64 @@ feature -- Execution
             -- Select and execute a command. Tokens exclude the executable name.
             -- Invalid calls terminate the process with {CLI_COMMAND}.Invalid_call.
         local
-            l_command: detachable CLI_COMMAND
+            l_match: detachable TUPLE [command: CLI_COMMAND; consumed_count: INTEGER]
             l_tokens: ARRAYED_LIST [STRING_32]
             l_parser: CLI_PARSER
             i: INTEGER
         do
-            if a_tokens.lower > a_tokens.upper then
-                show_help ("")
-            else
-                across commands as c loop
-                    if c.name.same_string (a_tokens [a_tokens.lower]) then
-                        l_command := c
-                    end
+            l_match := selected_command (a_tokens)
+            if attached l_match as match then
+                create l_tokens.make (a_tokens.upper - a_tokens.lower + 1 - match.consumed_count)
+                from i := a_tokens.lower + match.consumed_count until i > a_tokens.upper loop
+                    l_tokens.extend (a_tokens [i])
+                    i := i + 1
                 end
-
-                if attached l_command as c then
-                    create l_tokens.make (a_tokens.upper - a_tokens.lower)
-                    from i := a_tokens.lower + 1 until i > a_tokens.upper loop
-                        l_tokens.extend (a_tokens [i])
-                        i := i + 1
-                    end
-                    create l_parser.make (c.parameters)
-                    l_parser.parse (l_tokens)
-                    if l_parser.is_successful then
-                        c.handle (l_parser.values)
-                    else
-                        report_error (l_parser.error_message + "%NRun '" + name + " help " + c.name + "' for usage.")
-                    end
+                create l_parser.make (match.command.parameters)
+                l_parser.parse (l_tokens)
+                if l_parser.is_successful then
+                    match.command.handle (l_parser.values)
                 else
-                    report_unknown_command (a_tokens [a_tokens.lower])
+                    report_error (l_parser.error_message)
                 end
+            elseif a_tokens.lower > a_tokens.upper then
+                report_error ("Missing command.")
+            else
+                report_unknown_command (a_tokens [a_tokens.lower])
             end
         end
 
 feature {NONE} -- Implementation
 
+    selected_command (a_tokens: READABLE_INDEXABLE [STRING_32]): detachable TUPLE [command: CLI_COMMAND; consumed_count: INTEGER]
+            -- Command with the longest complete word prefix, including an empty default.
+        local
+            l_words: LIST [STRING_32]
+            l_count, i: INTEGER
+            l_matches: BOOLEAN
+        do
+            across commands as c loop
+                l_count := 0
+                l_matches := True
+                if not c.name.is_empty then
+                    l_words := c.name.split (' ')
+                    l_count := l_words.count
+                    l_matches := l_count <= a_tokens.upper - a_tokens.lower + 1
+                    from i := 1 until i > l_count or not l_matches loop
+                        l_matches := l_words [i].same_string (a_tokens [a_tokens.lower + i - 1])
+                        i := i + 1
+                    end
+                end
+                if l_matches and then (not attached Result as best or else l_count > best.consumed_count) then
+                    Result := [c, l_count]
+                end
+            end
+        end
+
     commands: ARRAYED_LIST [CLI_COMMAND]
 
     report_unknown_command (a_name: STRING_32)
         do
-            report_error ({STRING_32} "Unknown command: " + a_name + "%NRun '" + name + " help' to see available commands.")
+            report_error ({STRING_32} "Unknown command: " + a_name)
         end
 
     report_error (a_message: STRING_32)

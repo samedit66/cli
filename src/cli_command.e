@@ -19,7 +19,7 @@ feature -- Definition
         deferred
         end
 
-feature {CLI_APPLICATION, CLI_SINGLE_COMMAND_APPLICATION} -- Interface definition
+feature {CLI_APPLICATION} -- Interface definition
 
     interface
             -- Declare arguments, options, and flags.
@@ -216,7 +216,7 @@ feature -- Short names
         a_short_name: CHARACTER_32
     )
             -- Assign a short name to an option or flag.
-            -- Short names are letters or digits and can be assigned only once.
+            -- Short names are letters and can be assigned only once.
         require
             assignable: can_set_short_name (a_name, a_short_name)
         do
@@ -234,9 +234,9 @@ feature -- Short names
 feature -- Short name availability
 
     can_set_short_name (a_name: STRING_32; a_short_name: CHARACTER_32): BOOLEAN
-            -- Can an unassigned option or flag receive this unique letter or digit?
+            -- Can an unassigned option or flag receive this unique letter?
         do
-            Result := (a_short_name.is_alpha or else a_short_name.is_digit) and then
+            Result := a_short_name.is_alpha and then
                 (across parameters as p some
                     p.name.same_string (a_name) and then
                     p.kind /= p.Argument_kind and then not p.has_short_name end) and then
@@ -291,7 +291,7 @@ feature -- Failure
     Invalid_call: INTEGER = 2
             -- Command selection or arguments are invalid.
 
-feature {CLI_APPLICATION, CLI_SINGLE_COMMAND_APPLICATION} -- Parameter definitions
+feature {CLI_APPLICATION} -- Parameter definitions
 
     parameters: ARRAYED_LIST [CLI_PARAMETER]
             -- Definitions in declaration order; each command owns its list.

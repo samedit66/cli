@@ -1,0 +1,12 @@
+# Build assertion-enabled parser and routing tests.
+eiffelstudio:
+    mkdir -p build/eiffelstudio
+    GOBO_EIFFEL=ise ec -batch -config cli_tests.ecf -target cli_tests -project_path build/eiffelstudio -freeze -c_compile
+    cp build/eiffelstudio/EIFGENs/cli_tests/W_code/cli_tests build/eiffelstudio/cli_tests
+
+gobo:
+    #!/usr/bin/env sh
+    set -eu
+    mkdir -p build/gobo
+    cd build/gobo
+    GOBO_EIFFEL=ge gec ../../cli_tests.ecf

@@ -1,7 +1,7 @@
 # Build with EiffelStudio. Requires ec and ISE_LIBRARY.
 eiffelstudio:
     mkdir -p build/eiffelstudio
-    GOBO_EIFFEL=ise ec -batch -config text.ecf -target text -project_path build/eiffelstudio -c_compile
+    GOBO_EIFFEL=ise ec -batch -config text.ecf -target text -project_path build/eiffelstudio -freeze -c_compile
     cp build/eiffelstudio/EIFGENs/text/W_code/text build/eiffelstudio/text
 
 # Build with Gobo. Requires gec and GOBO.

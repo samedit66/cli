@@ -1,40 +1,10 @@
-"""Check built examples: python3 tests/check_examples.py [gobo|eiffelstudio ...]."""
+"""Check built examples and tests: python3 tests/check_examples.py [gobo|eiffelstudio ...]."""
 
 from pathlib import Path
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-CASES = [
-    ("greet", ["Alice", "--prefix=Hi"], 0, "Hi, Alice!\n", ""),
-    ("greet", ["Alice", "--prefix="], 0, ", Alice!\n", ""),
-    ("greet", ["Alice", "--prefix=a=b"], 0, "a=b, Alice!\n", ""),
-    ("greet", ["Alice", "--prefix=--help"], 0, "--help, Alice!\n", ""),
-    ("greet", ["--prefix", "--prefix=Hi", "Alice"], 0, "--prefix=Hi, Alice!\n", ""),
-    ("greet", ["--", "--prefix=Hi"], 0, "Hello, --prefix=Hi!\n", ""),
-    ("greet", ["Alice", "-p", "Hi", "-y"], 0, "HI, ALICE!\n", ""),
-    ("greet", ["Alice", "--prefix=Hi", "--prefix", "Hey"], 2, "", "Repeated parameter: prefix"),
-    ("greet", ["--yell=true"], 2, "", "Flag does not accept a value: --yell"),
-    ("greet", ["--help="], 2, "", "Flag does not accept a value: --help"),
-    ("greet", ["--unknown=x"], 2, "", "Unknown option: --unknown=x"),
-    ("greet", ["-p=Hi"], 0, "Hi, world!\n", ""),
-    ("text", ["join", "a", "b", "--separator=-", "--upper"], 0, "A-B\n", ""),
-    ("text", ["join", "a", "b", "--separator="], 0, "ab\n", ""),
-    ("text", ["join", "a", "b", "--separator=a=b"], 0, "aa=bb\n", ""),
-    ("text", ["join", "file=name.txt", "b"], 0, "file=name.txt b\n", ""),
-    ("text", ["join", "--", "--separator=x", "b"], 0, "--separator=x b\n", ""),
-    ("text", ["join", "a", "b", "--separator", "--upper=x"], 0, "a--upper=xb\n", ""),
-    ("text", ["repeat", "hello", "--count=2", "--prefix=> "], 0, "> hello\n> hello\n", ""),
-    ("text", ["repeat", "hello", "--count", "2", "--prefix", "> "], 0, "> hello\n> hello\n", ""),
-    ("text", ["repeat", "hello", "--count=0"], 0, "", ""),
-    ("text", ["repeat", "hello", "--count=-3"], 2, "", "Count must be zero or greater."),
-    ("text", ["repeat", "hello", "--count="], 2, "", "Invalid integer for count:"),
-    ("text", ["repeat", "hello", "--count=abc"], 2, "", "Invalid integer for count: abc"),
-    ("text", ["repeat", "hello", "--count=1", "--count", "2"], 2, "", "Repeated parameter: count"),
-    ("text", ["repeat", "hello", "--count"], 2, "", "Missing value for option: --count"),
-    ("text", ["join", "a", "--upper=true"], 2, "", "Flag does not accept a value: --upper"),
-    ("text", ["join", "a", "--unknown=x"], 2, "", "Unknown option: --unknown=x"),
-]
 
 
 def faketar_output(flags=(), file="", directory=".", blocking_factor=20, paths=(), exclude=(), checkpoint=()):
@@ -48,69 +18,267 @@ def faketar_output(flags=(), file="", directory=".", blocking_factor=20, paths=(
     )
 
 
-for tokens in (
-    ["-c", "-v", "-z", "-f", "archive.tar"],
-    ["-cvz", "-f=archive.tar"],
-    ["-cvzfarchive.tar"],
-    ["-cvzf=archive.tar"],
-    ["-cvzf", "archive.tar"],
-    ["--create", "--verbose", "--gzip", "--file=archive.tar"],
-):
-    CASES.append(("faketar", tokens, 0, faketar_output(("create", "verbose", "gzip"), "archive.tar"), ""))
+def routing_output(command="", verbose=False, help=False, count=7, arguments=(), tags=("default",), checkpoints=(8, 9), root_only=False):
+    return (
+        f"command={command}\nverbose={verbose}\nhelp={help}\ncount={count}\n"
+        + (f"root-only={root_only}\n" if command == "" else "")
+        + "arguments:\n" + "".join(f"  {value}\n" for value in arguments)
+        + "tags:\n" + "".join(f"  {value}\n" for value in tags)
+        + "checkpoints:\n" + "".join(f"  {value}\n" for value in checkpoints)
+    )
 
-CASES += [
-    ("faketar", ["-vXa", "-X=b", "--exclude", "c", "-K1", "-K=2", "--checkpoint", "-3"],
-     0, faketar_output(("verbose",), exclude=("a", "b", "c"), checkpoint=(1, 2, -3)), ""),
-    ("faketar", ["-X="], 0, faketar_output(exclude=("",)), ""),
-    ("faketar", ["-X", "-v"], 0, faketar_output(exclude=("-v",)), ""),
-    ("faketar", ["-K1", "-Kbad"], 2, "", "Invalid integer for checkpoint: bad"),
+
+def arc_pack_output(archive, sources=(), format="", keep_root=False, password_set=False):
+    return (
+        f"command=pack\narchive={archive}\nformat={format}\nkeep-root={keep_root}\n"
+        + f"password-set={password_set}\nsources:\n"
+        + "".join(f"  {source}\n" for source in sources)
+    )
+
+
+def arc_unpack_output(archive, destination="", entries=(), strip_root=False, password_set=False):
+    return (
+        f"command=unpack\narchive={archive}\ndestination={destination}\nstrip-root={strip_root}\n"
+        + f"password-set={password_set}\nentries:\n"
+        + "".join(f"  {entry}\n" for entry in entries)
+    )
+
+
+def arc_read_output(command, archive, tree=None, password_set=False):
+    return (
+        f"command={command}\narchive={archive}\n"
+        + (f"tree={tree}\n" if tree is not None else "")
+        + f"password-set={password_set}\n"
+    )
+
+
+CASES = [
+    ("greet", [], 0, "Hello, world!\n", ""),
+    ("greet", ["Alice", "--prefix", "Hi"], 0, "Hi, Alice!\n", ""),
+    ("greet", ["Alice", "--prefix", ""], 0, ", Alice!\n", ""),
+    ("greet", ["Alice", "--prefix", "a=b"], 0, "a=b, Alice!\n", ""),
+    ("greet", ["--prefix", "--help", "Alice"], 2, "", "Missing value for option: --prefix"),
+    ("greet", ["--prefix", "--", "Alice", "-y"], 2, "", "Missing value for option: --prefix"),
+    ("greet", ["--prefix=--help", "Alice"], 0, "--help, Alice!\n", ""),
+    ("greet", ["--prefix=--", "Alice", "-y"], 0, "--, ALICE!\n", ""),
+    ("greet", ["--", "--prefix=Hi"], 0, "Hello, --prefix=Hi!\n", ""),
+    ("greet", ["--", "--"], 0, "Hello, --!\n", ""),
+    ("greet", ["Alice", "-yp", "Hi"], 0, "HI, ALICE!\n", ""),
+    ("greet", ["-"], 0, "Hello, -!\n", ""),
+    ("greet", [""], 0, "Hello, !\n", ""),
+    ("greet", ["Alice", "Bob", "Carol"], 2, "", "Unexpected argument: Bob"),
+    ("greet", ["Alice", "--", "-y"], 2, "", "Unexpected argument: -y"),
+    ("greet", ["--prefix", "Hi", "-p", "Hey"], 2, "", "Repeated parameter: prefix"),
+    ("greet", ["-yy"], 2, "", "Repeated parameter: yell"),
+    ("greet", ["--prefix"], 2, "", "Missing value for option: --prefix"),
+    ("greet", ["--help"], 2, "", "Unknown option: --help"),
+    ("greet", ["--pre", "Hi"], 2, "", "Unknown option: --pre"),
+    ("greet", ["--prefix=Hi"], 0, "Hi, world!\n", ""),
+    ("greet", ["--prefix="], 0, ", world!\n", ""),
+    ("greet", ["--prefix=a=b"], 0, "a=b, world!\n", ""),
+    ("greet", ["--prefix==value"], 0, "=value, world!\n", ""),
+    ("greet", ["--prefix=-p"], 0, "-p, world!\n", ""),
+    ("greet", ["--prefix", "-"], 0, "-, world!\n", ""),
+    ("greet", ["--prefix", "--unknown=value"], 2, "", "Missing value for option: --prefix"),
+    ("greet", ["-yp", "-y"], 2, "", "Missing value for option: --prefix"),
+    ("greet", ["--prefix=Hi", "-p", "Hey"], 2, "", "Repeated parameter: prefix"),
+    ("greet", ["--prefix", "Hi", "--prefix=Hey"], 2, "", "Repeated parameter: prefix"),
+    ("greet", ["--unknown=value"], 2, "", "Unknown option: --unknown=value"),
+    ("greet", ["--=value"], 2, "", "Unknown option: --=value"),
+    ("greet", ["--yell=true"], 2, "", "Flag does not accept a value: --yell"),
+    ("greet", ["--yell="], 2, "", "Flag does not accept a value: --yell"),
+    ("greet", ["-p=Hi"], 0, "Hi, world!\n", ""),
+    ("greet", ["Alice", "-yp=Hi"], 0, "HI, ALICE!\n", ""),
+    ("greet", ["-p="], 0, ", world!\n", ""),
+    ("greet", ["-yp="], 0, ", WORLD!\n", ""),
+    ("greet", ["-p=a=b"], 0, "a=b, world!\n", ""),
+    ("greet", ["-p==value"], 0, "=value, world!\n", ""),
+    ("greet", ["-p=--help"], 0, "--help, world!\n", ""),
+    ("greet", ["-p=--"], 0, "--, world!\n", ""),
+    ("greet", ["-p=y"], 0, "y, world!\n", ""),
+    ("greet", ["-p=Hi", "--prefix=Hey"], 2, "", "Repeated parameter: prefix"),
+    ("greet", ["--prefix=Hi", "-p=Hey"], 2, "", "Repeated parameter: prefix"),
+    ("greet", ["-y=true"], 2, "", "Flag does not accept a value: -y"),
+    ("greet", ["-y="], 2, "", "Flag does not accept a value: -y"),
+    ("greet", ["-pHi"], 2, "", "Option with a value must end the group: -p"),
+    ("greet", ["-py", "Hi"], 2, "", "Option with a value must end the group: -p"),
+    ("greet", ["-yQ"], 2, "", "Unknown option: -Q"),
+    ("text", [], 2, "", "Missing command."),
+    ("text", ["unknown"], 2, "", "Unknown command: unknown"),
+    ("text", ["join", "a", "b", "--separator", "-", "--upper"], 0, "A-B\n", ""),
+    ("text", ["join", "a", "b", "--separator", ""], 0, "ab\n", ""),
+    ("text", ["join", "file=name.txt", "b"], 0, "file=name.txt b\n", ""),
+    ("text", ["join", "--", "--separator=x", "b"], 0, "--separator=x b\n", ""),
+    ("text", ["join", "a", "b", "--separator", "--upper"], 2, "", "Missing value for option: --separator"),
+    ("text", ["join", "a", "b", "--separator=--upper"], 0, "a--upperb\n", ""),
+    ("text", ["join"], 2, "", "Missing required parameter: parts"),
+    ("text", ["repeat", "hello", "--count", "2", "--prefix", "> "], 0, "> hello\n> hello\n", ""),
+    ("text", ["repeat", "hello", "-un", "2"], 0, "HELLO\nHELLO\n", ""),
+    ("text", ["repeat", "hello", "--count", "0"], 0, "", ""),
+    ("text", ["repeat", "hello", "--count", "-3"], 2, "", "Missing value for option: --count"),
+    ("text", ["repeat", "hello", "--count=-3"], 2, "", "Count must be zero or greater."),
+    ("text", ["repeat", "hello", "--count=2"], 0, "hello\nhello\n", ""),
+    ("text", ["repeat", "hello", "--count="], 2, "", "Invalid integer for count:"),
+    ("text", ["repeat", "hello", "--count", ""], 2, "", "Invalid integer for count:"),
+    ("text", ["repeat", "hello", "--count", "abc"], 2, "", "Invalid integer for count: abc"),
+    ("text", ["repeat", "hello", "--count", "1", "-n", "2"], 2, "", "Repeated parameter: count"),
+    ("text", ["repeat", "hello", "--count"], 2, "", "Missing value for option: --count"),
     ("text", ["repeat", "hello", "-u"], 2, "", "Missing required parameter: count"),
-    ("faketar", ["-cxtvzjpfarchive.tar", "-Ctmp", "-b=32", "src", "README.md"], 0,
+    ("text", ["repeat", "--count", "1"], 2, "", "Missing required parameter: text"),
+    ("text", ["repeat", "hello", "world", "--count", "1"], 2, "", "Unexpected argument: world"),
+    ("faketar", [], 0, faketar_output(), ""),
+    ("faketar", ["-cvzf", "archive.tar"], 0, faketar_output(("create", "verbose", "gzip"), "archive.tar"), ""),
+    ("faketar", ["-cvzf=-archive.tar", "-b=-3", "src"], 0,
+     faketar_output(("create", "verbose", "gzip"), "-archive.tar", blocking_factor=-3, paths=("src",)), ""),
+    ("faketar", ["-vX=-v", "-X=", "--exclude=a=b", "-K=-3", "-K=4"], 0,
+     faketar_output(("verbose",), exclude=("-v", "", "a=b"), checkpoint=(-3, 4)), ""),
+    ("faketar", ["-b="], 2, "", "Invalid integer for blocking-factor: "),
+    ("faketar", ["-K=bad"], 2, "", "Invalid integer for checkpoint: bad"),
+    ("faketar", ["-b=2147483648"], 2, "", "Invalid integer for blocking-factor: 2147483648"),
+    ("faketar", ["-cv=true"], 2, "", "Flag does not accept a value: -v"),
+    ("faketar", ["--create", "--verbose", "--gzip", "--file", "archive.tar"], 0,
+     faketar_output(("create", "verbose", "gzip"), "archive.tar"), ""),
+    ("faketar", ["-vX", "a", "-X", "b", "--exclude", "c", "-K", "1", "-K", "2", "--checkpoint=-3"],
+     0, faketar_output(("verbose",), exclude=("a", "b", "c"), checkpoint=(1, 2, -3)), ""),
+    ("faketar", ["-X", "a,b"], 0, faketar_output(exclude=("a,b",)), ""),
+    ("faketar", ["-X", ""], 0, faketar_output(exclude=("",)), ""),
+    ("faketar", ["-X", "-v"], 2, "", "Missing value for option: --exclude"),
+    ("faketar", ["--exclude=-v", "-X", "b", "--exclude="], 0, faketar_output(exclude=("-v", "b", "")), ""),
+    ("faketar", ["-cxtvzjpf", "archive.tar", "-C", "tmp", "-b", "32", "src", "README.md"], 0,
      faketar_output(("create", "extract", "list", "verbose", "gzip", "bzip2", "preserve"),
                     "archive.tar", "tmp", 32, ("src", "README.md")), ""),
-    ("faketar", ["-fcvz"], 0, faketar_output(file="cvz"), ""),
-    ("faketar", ["-f="], 0, faketar_output(), ""),
-    ("faketar", ["-f==name"], 0, faketar_output(file="=name"), ""),
-    ("faketar", ["-f=a=b"], 0, faketar_output(file="a=b"), ""),
-    ("faketar", ["-f", "--", "-v"], 0, faketar_output(("verbose",), "--"), ""),
+    ("faketar", ["-f", "--", "-v"], 2, "", "Missing value for option: --file"),
+    ("faketar", ["--file=--", "-v"], 0, faketar_output(("verbose",), "--"), ""),
     ("faketar", ["--", "-cvz", "-f=x"], 0, faketar_output(paths=("-cvz", "-f=x")), ""),
     ("faketar", ["a", "-cv", "b"], 0, faketar_output(("create", "verbose"), paths=("a", "b")), ""),
-    ("faketar", ["-b-3"], 0, faketar_output(blocking_factor=-3), ""),
-    ("faketar", ["-cb=-3"], 0, faketar_output(("create",), blocking_factor=-3), ""),
-    ("faketar", ["-b", "-3"], 0, faketar_output(blocking_factor=-3), ""),
-    ("faketar", ["-f", "--help"], 0, faketar_output(file="--help"), ""),
+    ("faketar", ["-b", "-3"], 2, "", "Missing value for option: --blocking-factor"),
+    ("faketar", ["--blocking-factor=-3"], 0, faketar_output(blocking_factor=-3), ""),
     ("faketar", ["-f", ""], 0, faketar_output(), ""),
-    ("faketar", ["-"], 0, faketar_output(paths=("-",)), ""),
-    ("faketar", ["cvzf"], 0, faketar_output(paths=("cvzf",)), ""),
-    ("faketar", ["-cvQ"], 2, "", "Unknown option: -Q"),
+    ("faketar", ["-K", "1", "-K", "bad"], 2, "", "Invalid integer for checkpoint: bad"),
     ("faketar", ["-vv"], 2, "", "Repeated parameter: verbose"),
     ("faketar", ["-cv", "--verbose"], 2, "", "Repeated parameter: verbose"),
-    ("faketar", ["-cv=yes"], 2, "", "Flag does not accept a value: -v"),
-    ("faketar", ["-v="], 2, "", "Flag does not accept a value: -v"),
-    ("faketar", ["-cvf"], 2, "", "Missing value for option: -f"),
-    ("faketar", ["-cb="], 2, "", "Invalid integer for blocking-factor:"),
-    ("faketar", ["-cbxyz"], 2, "", "Invalid integer for blocking-factor: xyz"),
-    ("faketar", ["-b2147483648"], 2, "", "Invalid integer for blocking-factor: 2147483648"),
-    ("faketar", ["-fx", "--file=y"], 2, "", "Repeated parameter: file"),
-    ("faketar", ["--help", "-vv"], 2, "", "Repeated parameter: verbose"),
-    ("greet", ["Alice", "-ypHi"], 0, "HI, ALICE!\n", ""),
-    ("text", ["repeat", "hello", "-un2"], 0, "HELLO\nHELLO\n", ""),
+    ("faketar", ["-cvf"], 2, "", "Missing value for option: --file"),
+    ("faketar", ["-cvzfarchive.tar"], 2, "", "Option with a value must end the group: -f"),
+    ("faketar", ["-b-3"], 2, "", "Option with a value must end the group: -b"),
+    ("faketar", ["--help"], 2, "", "Unknown option: --help"),
+    ("cli_tests", [], 0, "parser tests passed\n", ""),
+    ("arc", [], 0, "command=<root>\nhelp=False\nversion=False\n", ""),
+    ("arc", ["--help"], 0, "command=<root>\nhelp=True\nversion=False\n", ""),
+    ("arc", ["--version"], 0, "command=<root>\nhelp=False\nversion=True\n", ""),
+    ("arc", ["--help", "--version"], 0, "command=<root>\nhelp=True\nversion=True\n", ""),
+    ("arc", ["pack", "project.zip"], 0, arc_pack_output("project.zip"), ""),
+    ("arc", ["pack", "--format", "tar", "--keep-root", "backup", "./src", "README.md"],
+     0, arc_pack_output("backup", ("./src", "README.md"), "tar", keep_root=True), ""),
+    ("arc", ["pack", "project.zip", "--password", "example"],
+     0, arc_pack_output("project.zip", password_set=True), ""),
+    ("arc", ["pack", "--", "-archive.zip", "-source"],
+     0, arc_pack_output("-archive.zip", ("-source",)), ""),
+    ("arc", ["unpack", "project.zip"], 0, arc_unpack_output("project.zip"), ""),
+    ("arc", ["unpack", "--strip-root", "--entry", "docs", "--entry", "notes.txt", "project.zip", "./out"],
+     0, arc_unpack_output("project.zip", "./out", ("docs", "notes.txt"), strip_root=True), ""),
+    ("arc", ["unpack", "project.zip", "--entry", "a,b", "--password", "example"],
+     0, arc_unpack_output("project.zip", entries=("a,b",), password_set=True), ""),
+    ("arc", ["list", "project.zip"], 0, arc_read_output("list", "project.zip", tree=False), ""),
+    ("arc", ["list", "--tree", "project.zip"], 0, arc_read_output("list", "project.zip", tree=True), ""),
+    ("arc", ["list", "tree", "project.zip"], 0, arc_read_output("list tree", "project.zip", tree=True), ""),
+    ("arc", ["list", "--", "tree"], 0, arc_read_output("list", "tree", tree=False), ""),
+    ("arc", ["list", "tree", "--password", "example", "project.zip"],
+     0, arc_read_output("list tree", "project.zip", tree=True, password_set=True), ""),
+    ("arc", ["info", "project.zip"], 0, arc_read_output("info", "project.zip"), ""),
+    ("arc", ["verify", "--password", "example", "project.zip"],
+     0, arc_read_output("verify", "project.zip", password_set=True), ""),
+    ("arc", ["list", "tree"], 2, "", "Missing required parameter: archive"),
+    ("arc", ["list", "tree", "project.zip", "extra"], 2, "", "Unexpected argument: extra"),
+    ("arc", ["unpack", "project.zip", "./out", "extra"], 2, "", "Unexpected argument: extra"),
+    ("arc", ["--help", "pack"], 2, "", "Unexpected argument: pack"),
+    ("arc", ["pack", "--version", "project.zip"], 2, "", "Unknown option: --version"),
+    ("arc", ["pack", "--help"], 2, "", "Unknown option: --help"),
+    ("arc", ["pack", "--format=zip", "project.zip"], 0, arc_pack_output("project.zip", format="zip"), ""),
+    ("arc", ["pack", "--password", "--keep-root", "project.zip"], 2, "", "Missing value for option: --password"),
+    ("arc", ["pack", "--password=--keep-root", "project.zip"],
+     0, arc_pack_output("project.zip", password_set=True), ""),
+    ("arc", ["pack", "--password", "--unknown", "project.zip"], 2, "", "Missing value for option: --password"),
+    ("arc", ["pack", "--password", "--", "project.zip"], 2, "", "Missing value for option: --password"),
+    ("arc", ["--help=true"], 2, "", "Flag does not accept a value: --help"),
+    ("arc", ["pack"], 2, "", "Missing required parameter: archive"),
+    ("arc", ["version"], 2, "", "Unexpected argument: version"),
+    ("arc", ["--version", "--version"], 2, "", "Repeated parameter: version"),
 ]
 
-for compiler in sys.argv[1:] or ["gobo", "eiffelstudio"]:
-    for example, tokens, code, stdout, error in CASES:
-        executable = ROOT / "examples" / example / "build" / compiler / example
-        result = subprocess.run([str(executable), *tokens], capture_output=True, text=True, timeout=10)
-        assert (result.returncode, result.stdout) == (code, stdout), (compiler, example, tokens, result)
-        assert error in result.stderr, (compiler, example, tokens, result.stderr)
-        if not error:
-            assert not result.stderr, (compiler, example, tokens, result.stderr)
-    print(f"{compiler}: {len(CASES)} checks passed")
+for tokens, command, kwargs in (
+    ([], "", {}),
+    (["remote"], "remote", {}),
+    (["remote", "add", "origin"], "remote add", {"arguments": ("origin",)}),
+    (["remote", "add", "deep", "value"], "remote add deep", {"arguments": ("value",)}),
+    (["remote", "list"], "remote", {"arguments": ("list",)}),
+    (["remoteadd"], "", {"arguments": ("remoteadd",)}),
+    (["remote add"], "", {"arguments": ("remote add",)}),
+    (["lonely"], "", {"arguments": ("lonely",)}),
+    (["lonely", "child"], "lonely child", {}),
+    (["--", "remote", "add"], "", {"arguments": ("remote", "add")}),
+    (["remote", "--", "add", "deep"], "remote", {"arguments": ("add", "deep")}),
+    (["--root-only", "remote", "add"], "", {"root_only": True, "arguments": ("remote", "add")}),
+    (["remote", "add", "-vht", "a", "-t", "b", "--checkpoint=-3"], "remote add",
+     {"verbose": True, "help": True, "tags": ("a", "b"), "checkpoints": (-3,)}),
+    (["remote", "required", "target", "--count", "1", "--help"], "remote required",
+     {"arguments": ("target",), "count": 1, "help": True}),
+):
+    CASES.append(("cli_tests", ["route", *tokens], 0, routing_output(command, **kwargs), ""))
 
-    result = subprocess.run(
-        [str(ROOT / "examples/faketar/build" / compiler / "faketar"), "--help"],
-        capture_output=True, text=True, timeout=10,
-    )
-    assert result.returncode == 0 and not result.stderr, (compiler, result)
-    assert "first value option takes the entire" in result.stdout, (compiler, result.stdout)
-    assert "-fcvz sets file=cvz" in result.stdout, (compiler, result.stdout)
+CASES += [
+    ("cli_tests", ["route-root-first", "remote", "add", "deep"], 0, routing_output("remote add deep"), ""),
+    ("cli_tests", ["route-no-default", "remote", "add"], 0, routing_output("remote add"), ""),
+    ("cli_tests", ["route-no-default"], 2, "", "Missing command."),
+    ("cli_tests", ["route-no-default", "unknown"], 2, "", "Unknown command: unknown"),
+    ("cli_tests", ["route-no-default", "lonely"], 2, "", "Unknown command: lonely"),
+    ("cli_tests", ["route", "remote", "add", "--root-only"], 2, "", "Unknown option: --root-only"),
+    ("cli_tests", ["route", "remote", "required", "--help"], 2, "", "Missing required parameter: target"),
+    ("cli_tests", ["route", "remote", "required", "target", "--help"], 2, "", "Missing required parameter: count"),
+    ("cli_tests", ["route", "remote", "required", "target", "extra", "--count", "1"], 2, "", "Unexpected argument: extra"),
+    ("cli_tests", ["route", "remote", "add", "-tt", "value"], 2, "", "Option with a value must end the group: -t"),
+    ("cli_tests", ["single-required"], 2, "", "Missing required parameter: target"),
+    ("cli_tests", ["single-required", "--help"], 2, "", "Missing required parameter: target"),
+    ("cli_tests", ["single-required", "target"], 2, "", "Missing required parameter: count"),
+    ("cli_tests", ["single-required", "target", "--count", "1"],
+     0, routing_output(arguments=("target",), count=1), ""),
+    ("cli_tests", ["single-required", "target", "--count", "1", "--help"],
+     0, routing_output(arguments=("target",), count=1, help=True), ""),
+    ("cli_tests", ["single-required", "target", "extra", "--count", "1"], 2, "", "Unexpected argument: extra"),
+]
+
+HELP_CASES = [
+    ("cli_tests", ["route", "help", "remote", "add"], "routing remote add - "),
+    ("arc", ["help", "list", "tree"], "arc list tree - "),
+]
+
+
+def executable_path(name, compiler):
+    project = ROOT / "tests" if name == "cli_tests" else ROOT / "examples" / name
+    return project / "build" / compiler / name
+
+
+def main():
+    for compiler in sys.argv[1:] or ["gobo", "eiffelstudio"]:
+        for name, tokens, code, stdout, error in CASES:
+            result = subprocess.run(
+                [str(executable_path(name, compiler)), *tokens],
+                capture_output=True, text=True, timeout=10,
+            )
+            context = (compiler, name, tokens, result)
+            assert (result.returncode, result.stdout) == (code, stdout), context
+            assert error in result.stderr, context
+            if not error:
+                assert not result.stderr, context
+
+        for name, tokens, prefix in HELP_CASES:
+            result = subprocess.run(
+                [str(executable_path(name, compiler)), *tokens],
+                capture_output=True, text=True, timeout=10,
+            )
+            assert result.returncode == 0 and not result.stderr, (compiler, result)
+            assert result.stdout.startswith(prefix), (compiler, result)
+        print(f"{compiler}: {len(CASES) + len(HELP_CASES)} checks passed")
+
+
+if __name__ == "__main__":
+    main()

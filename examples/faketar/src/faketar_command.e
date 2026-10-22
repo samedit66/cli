@@ -6,9 +6,9 @@ inherit
 
 feature -- Definition
 
-    name: STRING_32 = "faketar"
+    name: STRING_32 = ""
 
-    description: STRING_32 = "Report parsed parameters only; no archive or file operations.%NShort options: flags combine (-cvz). The first value option takes the entire%Nremainder of the group, stripping one leading '='; otherwise it takes the next%Ntoken. Thus -cvzfarchive.tar sets c, v, z and file=archive.tar; -fcvz sets file=cvz."
+    description: STRING_32 = "Report parsed parameters only; no archive or file operations.%NShort flags combine (-cvz). A value option must end its group:%N-cvzf archive.tar or -cvzf=archive.tar. Repeat list options for more values."
 
     interface
         do

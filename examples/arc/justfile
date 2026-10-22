@@ -1,0 +1,13 @@
+# Build with EiffelStudio. Requires ec and ISE_LIBRARY.
+eiffelstudio:
+    mkdir -p build/eiffelstudio
+    GOBO_EIFFEL=ise ec -batch -config arc.ecf -target arc -project_path build/eiffelstudio -freeze -c_compile
+    cp build/eiffelstudio/EIFGENs/arc/W_code/arc build/eiffelstudio/arc
+
+# Build with Gobo. Requires gec and GOBO.
+gobo:
+    #!/usr/bin/env sh
+    set -eu
+    mkdir -p build/gobo
+    cd build/gobo
+    GOBO_EIFFEL=ge gec ../../arc.ecf

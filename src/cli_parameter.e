@@ -256,7 +256,7 @@ feature {CLI_COMMAND} -- Short name assignment
         require
             option_or_flag: kind /= Argument_kind
             not_assigned: not has_short_name
-            valid_short_name: a_short_name.is_alpha or else a_short_name.is_digit
+            valid_short_name: a_short_name.is_alpha
         do
             short_name := a_short_name
             has_short_name := True
@@ -285,6 +285,6 @@ invariant
     boolean_is_flag: (value_type = Boolean_type) = (kind = Flag_kind)
     optional_flag: kind = Flag_kind implies is_optional
     short_name_for_option_or_flag: has_short_name implies kind /= Argument_kind
-    valid_short_name: has_short_name implies (short_name.is_alpha or else short_name.is_digit)
+    valid_short_name: has_short_name implies short_name.is_alpha
 
 end

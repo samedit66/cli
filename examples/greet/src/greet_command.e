@@ -6,7 +6,7 @@ inherit
 
 feature -- Metadata
 
-    name: STRING_32 = "greet"
+    name: STRING_32 = ""
 
     description: STRING_32 = "Greet someone"
 

@@ -8,9 +8,12 @@ feature {NONE} -- Entry point
 
     make
         local
-            application: CLI_SINGLE_COMMAND_APPLICATION
+            application: CLI_APPLICATION
+            command: FAKETAR_COMMAND
         do
-            create application.make (create {FAKETAR_COMMAND})
+            create command
+            create application.make ("faketar", command.description)
+            application.add_command (command)
             application.run
         end
 

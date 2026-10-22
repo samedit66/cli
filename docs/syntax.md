@@ -1,64 +1,121 @@
 # Command-line syntax
 
-## Commands and parameters
+These rules define command selection and token parsing. See
+[classes and usage](usage.md) for declarations and API examples.
 
-With `CLI_APPLICATION`, the first token selects a command. With
-`CLI_SINGLE_COMMAND_APPLICATION`, tokens are passed directly to its command.
+## Command selection
 
-Required positional arguments precede optional ones. A positional list must be
-last. Required lists need at least one value. Parameter names cannot contain
-spaces or `=`, or start with `-`.
+`CLI_APPLICATION` compares registered command names with the first input tokens.
+It selects the longest complete matching name by word count. Words are separated
+by single spaces in command definitions and compared with whole input tokens.
+For commands `remote` and `remote add`, input `remote add origin` selects
+`remote add` and passes only `origin` to its parser. Input `remote list` selects
+`remote` and passes `list`. A single quoted token `"remote add"` does not match
+the two-word name.
+
+A command with an empty name matches zero tokens. It is selected when no nonempty
+name matches and receives the full input. This also applies to empty input. Without
+a match, selection fails. A parsing error never retries a shorter name.
+
+Matching starts at the first token; `--verbose remote add` does not select
+`remote add`. Options of the empty command are not inherited by named commands.
+To pass a command name as a positional value to the empty command, use
+`-- remote add`. Parameter names do not affect routing; positional values may
+collide with command words regardless of their parameter's name.
+
+An application containing only one command with an empty name passes all tokens
+to that command, without a command prefix. `CLI_APPLICATION` does not insert a
+help flag or display help implicitly. A registered `CLI_HELP_COMMAND` is an
+ordinary command and accepts multiword names.
+
+Command names must be unique. Nonempty names use single spaces between words,
+with no leading or trailing spaces, tabs, or line breaks. No command word may
+begin with `-`. The application name is separate and must be nonempty.
+
+## Parameter definitions
+
+Required positional parameters precede optional ones. At most one positional list
+is allowed, and it must be last. These restrictions are checked when a command
+registers its parameters. Optional positions fill from left to right; a caller
+cannot skip an earlier position while providing a later one. Values are never
+reassigned to a later parameter because conversion to the current type failed.
+
+Parameter names are unique within a command, cannot contain spaces or `=`, and
+cannot start with `-`. Short aliases are unique single letters within a command.
+Required parameters need explicit values. Required lists need at least one value.
 
 ## Named options
 
 | Form | Example |
 |---|---|
-| Long name with a separate value | `--file archive.tar` |
-| Long name with `=` | `--file=archive.tar` |
-| Short name with a separate value | `-f archive.tar` |
-| Short name with `=` | `-f=archive.tar` |
-| Short name with an attached value | `-farchive.tar` |
-| Combined short flags | `-cvz` means `-c -v -z` |
+| Long flag | `--verbose` |
+| Long option with one value | `--file archive.tar` |
+| Long option with an inline value | `--file=archive.tar` |
+| Short flag | `-v` |
+| Short option with one value | `-f archive.tar` |
+| Short option with an inline value | `-f=archive.tar` |
+| Group of short flags | `-cvz` means `-c -v -z` |
+| Group ending with a value option | `-cvzf archive.tar` |
+| Group ending with an inline value | `-cvzf=archive.tar` |
+| Repeated list option | `-X tmp -X cache` |
 
-An option without an attached value consumes exactly one following token, even
-if it starts with `-`. For example, `--file --help` sets `file` to `--help`.
+Every non-flag occurrence accepts exactly one value: either the suffix of an
+option after `=`, or a separate following token. There are no options taking an
+optional value or consuming several following tokens.
 
-Only the first separator `=` is removed: `--file=a=b` sets `file` to `a=b`, and
-`-f==name` sets it to `=name`. An explicit value may be empty: `--file=` or `-f=`.
-Flags do not accept values: `--verbose=true` and `-v=yes` are errors.
+A separate token beginning with `-` and containing more than one character cannot
+be an option's value. If such a token appears while a value is expected, parsing
+fails with a missing-value diagnostic for the preceding option. This applies to
+known options, unknown options, negative numbers, and the separator `--`.
+For example, `--password --keep-root` reports a missing password.
+An absent following token is also an error. A single `-` and an empty string are
+accepted as separate values.
 
-Only list options may be repeated. Repeating a scalar option or a flag, including
-`-vv`, is an error. Lists use repeated options, such as `--port 80 --port 81`;
-commas are not treated as list separators.
+Use an inline value to pass a value beginning with `-`:
+`--password=--keep-root`, `-f=-archive`, or `--count=-3`.
+Only the first `=` separates the name and value: `--file=a=b` and `-f=a=b`
+store `a=b`. `--file=` and `-f=` supply an explicit empty string. Empty integer
+values fail conversion. Flags do not accept inline values, including an empty
+one: `--verbose=true`, `-v=true`, and `-v=` are errors. Quoting a separate value
+does not change token recognition.
 
-## Short-option groups
+An option accepting a value must be the final letter in its short group.
+`-cvzf archive.tar` and `-cvzf=archive.tar` are valid. The inline value consumes
+the entire suffix after `=`, so `-f=cvz` stores `cvz` without setting flags.
+Attached values without `=` are unsupported: `-fcvz` and `-farchive.tar` are
+errors. Long names must match exactly.
 
-**The first option that takes a value consumes the entire remainder of the
-token and ends the group.** One leading `=` is removed as a separator. If there
-is no remainder, the option consumes the next token.
+Only list options may repeat. Repeating a scalar option or flag, including `-vv`,
+is an error. Long and short spellings refer to the same parameter, so
+`--file a -f b` is also a repetition. Commas are ordinary characters: `-X a,b`
+stores one value. See [explicit splitting](usage.md#explicit-splitting) for splitting parsed strings
+inside a handler.
 
-Assuming `c`, `v`, and `z` are flags and `f` takes a string value:
+## Positionals and the separator
 
-| Input | Interpretation |
-|---|---|
-| `-cvzfarchive.tar` | Flags `c`, `v`, `z`; `file=archive.tar` |
-| `-cvzf=archive.tar` | Same result |
-| `-cvzf archive.tar` | Same result |
-| `-fcvz` | `file=cvz`; no flags |
+`--` ends option recognition when no option is waiting for a value. All subsequent
+tokens are positional, including further `--` tokens. When a value is pending,
+`--` instead causes a missing-value error. Use `--file=--` or `-f=--` to pass it as an option
+value. A single `-` is an ordinary value.
 
-Unknown short options and repeated flags are errors anywhere in a group.
-Groups require a leading dash; `cvzf` is an ordinary positional value.
+Positional values fill the next declared position. An individual position advances
+after one value; the final list accepts all remaining positional values. Options
+may appear between positional values until `--` is encountered. A positional
+token with no remaining position is an unexpected argument, even if options follow.
 
-See [faketar](../examples/faketar/README.md) for a runnable demonstration that
-only reports parsed values and never operates on files or archives.
+Negative positional integers require the separator: `tool -- -3`. Negative option
+values require an inline form: `tool --count=-3` or `tool -n=-3`. No special numeric-alias
+or negative-number recognition is performed.
 
-## Ending option recognition
+## Defaults and completion
 
-`--` ends option recognition when encountered outside an option's value.
-For example, `-- -cvz` passes `-cvz` as a positional value, whereas `-f --`
-sets `file` to `--`.
+The parser first stores explicit values. At end of input it checks missing
+required parameters and adds defaults for absent optional parameters. The first
+explicit list value replaces its entire default; subsequent values append.
+Flags default to `False` and become `True` when present.
 
-Negative integer operands do not require `--` when the next positional parameter
-is integer-valued. An exact numeric short alias, such as `-1`, takes priority
-when defined. Otherwise, a token beginning with a minus and a digit is parsed as
-a positional integer in that context and must be a valid 32-bit integer.
+A pending option without a value, a missing required parameter, an invalid type,
+an unknown option, a forbidden repetition, or an unexpected positional value makes
+the whole parse fail. The parser exposes a complete `CLI_COMMAND_INPUT` only on
+success. A flag named `help` has no effect on these rules. Applications report
+invalid input with exit code `2`; see [error handling](usage.md#errors).

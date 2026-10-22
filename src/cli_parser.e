@@ -7,144 +7,154 @@ create
 feature {NONE} -- Initialization
 
     make (a_parameters: ITERABLE [CLI_PARAMETER])
-            -- Use definitions that remain unchanged during parsing.
+            -- Retain definitions for one parse.
+            -- Definitions must remain unchanged until parsing finishes.
         do
             create parameters.make (Default_capacity)
             create positional_parameters.make (Default_capacity)
-
             across a_parameters as p loop
                 parameters.extend (p)
                 if p.kind = p.Argument_kind then
                     positional_parameters.extend (p)
                 end
             end
-
             create parsed_values.make
-            create seen_names.make (Default_capacity)
             create last_error.make_empty
         end
 
 feature -- Parsing
 
     parse (a_tokens: READABLE_INDEXABLE [STRING_32])
-            -- Recognize tokens and validate required parameters.
-        require
-            not_parsed: not is_parsed
-        do
-            parse_tokens (a_tokens)
-            if not has_error then
-                validate_required
-            end
-        ensure
-            parsed: is_parsed
-            outcome: is_successful xor has_error
-        end
-
-    parse_tokens (a_tokens: READABLE_INDEXABLE [STRING_32])
-            -- Recognize tokens without checking required parameters.
-            -- Tokens exclude the program and subcommand names.
+            -- Consume tokens, check completeness, and supply absent defaults.
+            -- Read tokens without retaining or changing the input.
         require
             not_parsed: not is_parsed
         local
-            i, l_position, l_equals_position: INTEGER
-            l_options_finished: BOOLEAN
-            l_token, l_option_token: STRING_32
-            l_parameter: detachable CLI_PARAMETER
-            l_next_token, l_inline_value: detachable STRING_32
+            i, j, l_position, l_state, l_equals_position: INTEGER
+            l_token, l_option_token, l_short_token: STRING_32
+            l_pending_option: detachable CLI_PARAMETER
         do
-            initialize_defaults
-
             from
                 i := a_tokens.lower
                 l_position := 1
+                l_state := Reading_parameters
             until
                 i > a_tokens.upper or has_error
             loop
                 l_token := a_tokens [i]
-                if not l_options_finished and then l_token.same_string_general ("--") then
-                    l_options_finished := True
-                else
-                    l_parameter := Void
-                    l_equals_position := 0
-                    l_option_token := l_token
-                    if not l_options_finished then
-                        if l_token.count > 2 and then l_token.starts_with ("--") then
-                            l_equals_position := l_token.index_of ('=', 3)
-                            if l_equals_position > 0 then
-                                l_option_token := l_token.substring (1, l_equals_position - 1)
-                            end
-                        end
-                        l_parameter := named_parameter (l_option_token)
-                    end
-                    next_token_consumed := False
-                    l_next_token := Void
-                    l_inline_value := Void
-                    if i < a_tokens.upper then
-                        l_next_token := a_tokens [i + 1]
-                    end
-                    if attached l_parameter as p then
-                        if l_equals_position > 0 then
-                            l_inline_value := l_token.substring (l_equals_position + 1, l_token.count)
-                        end
-                        parse_named_parameter (p, l_option_token, l_inline_value, l_next_token)
-                    elseif not l_options_finished and then is_option_token (l_token) and then
-                        not is_negative_integer_argument (l_token, l_position)
-                    then
-                        if l_token.starts_with ("--") then
-                            fail ({STRING_32} "Unknown option: " + l_token)
+                inspect l_state
+                when Expecting_option_value then
+                    check attached l_pending_option as p then
+                        if l_token.count > 1 and then l_token [1] = '-' then
+                            -- An option-like token cannot fill a pending value.
+                            fail ({STRING_32} "Missing value for option: --" + p.name)
                         else
-                            parse_short_options (l_token, l_next_token)
+                            store_value (p, l_token)
                         end
+                    end
+                    l_pending_option := Void
+                    -- Return to parameter recognition for the next token.
+                    l_state := Reading_parameters
+
+                when Reading_parameters, Reading_positionals then
+                    if l_state = Reading_parameters and then l_token.same_string ("--") then
+                        -- All following tokens are positional values.
+                        l_state := Reading_positionals
+
+                    elseif l_state = Reading_parameters and then l_token.starts_with ("--") then
+                        -- Split only the first '='; its suffix is a literal value.
+                        l_equals_position := l_token.index_of ('=', 3)
+                        if l_equals_position > 0 then
+                            l_option_token := l_token.substring (1, l_equals_position - 1)
+                        else
+                            l_option_token := l_token
+                        end
+                        if attached lookup_option (l_option_token) as p then
+                            if p.kind = p.Flag_kind then
+                                if l_equals_position > 0 then
+                                    fail ({STRING_32} "Flag does not accept a value: " + l_option_token)
+                                else
+                                    store_value (p, Void)
+                                end
+                            elseif l_equals_position > 0 then
+                                store_value (p, l_token.substring (l_equals_position + 1, l_token.count))
+                            else
+                                l_pending_option := p
+                                -- The next iteration consumes the option's value.
+                                l_state := Expecting_option_value
+                            end
+                        else
+                            fail ({STRING_32} "Unknown option: " + l_token)
+                        end
+
+                    elseif l_state = Reading_parameters and then
+                        l_token.count > 1 and then l_token [1] = '-'
+                    then
+                        from j := 2 until j > l_token.count or has_error loop
+                            l_short_token := {STRING_32} "-" + l_token.substring (j, j)
+                            if attached lookup_option (l_short_token) as p then
+                                if p.kind = p.Flag_kind then
+                                    if j < l_token.count and then l_token [j + 1] = '=' then
+                                        fail ({STRING_32} "Flag does not accept a value: " + l_short_token)
+                                    else
+                                        store_value (p, Void)
+                                    end
+                                elseif j < l_token.count and then l_token [j + 1] = '=' then
+                                    -- The suffix is literal and ends the short group.
+                                    store_value (p, l_token.substring (j + 2, l_token.count))
+                                    j := l_token.count
+                                elseif j < l_token.count then
+                                    fail ({STRING_32} "Option with a value must end the group: " + l_short_token)
+                                else
+                                    l_pending_option := p
+                                    -- A value option must end its group.
+                                    l_state := Expecting_option_value
+                                end
+                            else
+                                fail ({STRING_32} "Unknown option: " + l_short_token)
+                            end
+                            j := j + 1
+                        end
+
                     elseif l_position > positional_parameters.count then
+                        -- Keep the current token and its tail unconsumed on error.
                         fail ({STRING_32} "Unexpected argument: " + l_token)
                     else
                         store_value (positional_parameters [l_position], l_token)
-                        if not positional_parameters [l_position].is_multiple then
+                        if not has_error and then not positional_parameters [l_position].is_multiple then
+                            -- Advance the positional queue; a list stays at its head.
                             l_position := l_position + 1
                         end
                     end
-                    if next_token_consumed then
-                        i := i + 1
-                    end
                 end
-                i := i + 1
+
+                if not has_error then
+                    -- The only advancement through input tokens.
+                    i := i + 1
+                end
             end
 
+            if not has_error then
+                if attached l_pending_option as p then
+                    fail ({STRING_32} "Missing value for option: --" + p.name)
+                else
+                    complete_values
+                end
+            end
             is_parsed := True
         ensure
             parsed: is_parsed
-            not_validated: not is_validated
-        end
-
-    validate_required
-            -- Check completeness after successful token recognition.
-        require
-            parsed: is_parsed
-            no_error: not has_error
-            not_validated: not is_validated
-        do
-            across parameters as p loop
-                if not has_error and then not p.is_optional and then not seen_names.has (p.name) then
-                    fail ({STRING_32} "Missing required parameter: " + p.name)
-                end
-            end
-            is_validated := True
-        ensure
-            validated: is_validated
             outcome: is_successful xor has_error
         end
 
 feature -- Status report
 
     is_parsed: BOOLEAN
-            -- Have tokens been processed?
-
-    is_validated: BOOLEAN
-            -- Have required parameters been checked?
+            -- Has parsing finished?
 
     is_successful: BOOLEAN
         do
-            Result := is_validated and then not has_error
+            Result := is_parsed and then not has_error
         end
 
     has_error: BOOLEAN
@@ -154,17 +164,8 @@ feature -- Status report
 
 feature -- Result
 
-    recognized_values: CLI_COMMAND_INPUT
-            -- Recognized values and defaults; required parameters may be absent.
-        require
-            parsed: is_parsed
-            no_error: not has_error
-        do
-            Result := parsed_values
-        end
-
     values: CLI_COMMAND_INPUT
-            -- Values after successful required-parameter validation.
+            -- Complete values after successful parsing.
         require
             successful: is_successful
         do
@@ -178,33 +179,88 @@ feature -- Result
             Result := last_error.twin
         end
 
-feature {NONE} -- Definitions and state
+feature {NONE} -- Input and result
 
     parameters: ARRAYED_LIST [CLI_PARAMETER]
 
     positional_parameters: ARRAYED_LIST [CLI_PARAMETER]
+            -- Declaration order; the parse-local position is the queue head.
 
     parsed_values: CLI_COMMAND_INPUT
-
-    seen_names: HASH_TABLE [BOOLEAN, STRING_32]
+            -- Contains only explicit values until completion supplies defaults.
 
     last_error: STRING_32
 
 feature {NONE} -- Implementation
 
-    initialize_defaults
+    lookup_option (a_spelling: STRING_32): detachable CLI_PARAMETER
+            -- Definition matching an exact long name or one-letter alias.
         do
             across parameters as p loop
-                if p.kind = p.Flag_kind then
-                    parsed_values.put_boolean (p.name, False)
-                elseif p.is_multiple then
-                    if p.value_type = p.Integer_type then
-                        parsed_values.put_integer_list (p.name, p.integer_list_default)
-                    else
-                        parsed_values.put_string_list (p.name, p.string_list_default)
+                if p.kind /= p.Argument_kind then
+                    if a_spelling.count > 2 and then a_spelling.starts_with ("--") and then
+                        p.name.same_string (a_spelling.substring (3, a_spelling.count))
+                    then
+                        Result := p
+                    elseif a_spelling.count = 2 and then a_spelling [1] = '-' and then
+                        p.has_short_name and then p.short_name = a_spelling [2]
+                    then
+                        Result := p
                     end
-                elseif p.is_optional then
-                    if p.value_type = p.Integer_type then
+                end
+            end
+        end
+
+    store_value (a_parameter: CLI_PARAMETER; a_token: detachable STRING_32)
+            -- Store one explicit occurrence; flags have no value token.
+        require
+            value_for_non_flag: (a_parameter.kind = a_parameter.Flag_kind) = (a_token = Void)
+        do
+            if parsed_values.has_parameter (a_parameter.name) and then not a_parameter.is_multiple then
+                fail ({STRING_32} "Repeated parameter: " + a_parameter.name)
+            elseif a_parameter.kind = a_parameter.Flag_kind then
+                parsed_values.put_boolean (a_parameter.name, True)
+            elseif attached a_token as l_token then
+                if a_parameter.value_type = a_parameter.Integer_type then
+                    if not l_token.is_integer_32 then
+                        fail ({STRING_32} "Invalid integer for " + a_parameter.name + ": " + l_token)
+                    elseif a_parameter.is_multiple then
+                        if parsed_values.has_parameter (a_parameter.name) then
+                            parsed_values.append_integer (a_parameter.name, l_token.to_integer_32)
+                        else
+                            parsed_values.put_integer_list (a_parameter.name, {ARRAY [INTEGER]} <<l_token.to_integer_32>>)
+                        end
+                    else
+                        parsed_values.put_integer (a_parameter.name, l_token.to_integer_32)
+                    end
+                elseif a_parameter.is_multiple then
+                    if parsed_values.has_parameter (a_parameter.name) then
+                        parsed_values.append_string (a_parameter.name, l_token)
+                    else
+                        parsed_values.put_string_list (a_parameter.name, {ARRAY [STRING_32]} <<l_token>>)
+                    end
+                else
+                    parsed_values.put_string (a_parameter.name, l_token)
+                end
+            end
+        end
+
+    complete_values
+            -- Report missing required values and supply defaults for absent parameters.
+        do
+            across parameters as p loop
+                if not has_error and then not parsed_values.has_parameter (p.name) then
+                    if not p.is_optional then
+                        fail ({STRING_32} "Missing required parameter: " + p.name)
+                    elseif p.kind = p.Flag_kind then
+                        parsed_values.put_boolean (p.name, False)
+                    elseif p.is_multiple then
+                        if p.value_type = p.Integer_type then
+                            parsed_values.put_integer_list (p.name, p.integer_list_default)
+                        else
+                            parsed_values.put_string_list (p.name, p.string_list_default)
+                        end
+                    elseif p.value_type = p.Integer_type then
                         parsed_values.put_integer (p.name, p.integer_default)
                     else
                         parsed_values.put_string (p.name, p.string_default)
@@ -213,135 +269,19 @@ feature {NONE} -- Implementation
             end
         end
 
-    next_token_consumed: BOOLEAN
-            -- Did the last named option consume the following token?
-
-    parse_short_options (a_token: STRING_32; a_next_token: detachable STRING_32)
-            -- Read flags left to right. A value option takes the entire remainder,
-            -- stripping one leading '='; without a remainder it takes the next token.
-        require
-            short_token: a_token.count > 1 and then a_token [1] = '-' and then a_token [2] /= '-'
-        local
-            i: INTEGER
-            l_option_token: STRING_32
-            l_inline_value: detachable STRING_32
-            l_finished: BOOLEAN
-        do
-            from i := 2 until i > a_token.count or l_finished or has_error loop
-                l_option_token := {STRING_32} "-" + a_token.substring (i, i)
-                if attached named_parameter (l_option_token) as p then
-                    l_inline_value := Void
-                    if i < a_token.count and then a_token [i + 1] = '=' then
-                        l_inline_value := a_token.substring (i + 2, a_token.count)
-                        l_finished := True
-                    elseif p.kind /= p.Flag_kind then
-                        if i < a_token.count then
-                            l_inline_value := a_token.substring (i + 1, a_token.count)
-                        end
-                        l_finished := True
-                    end
-                    parse_named_parameter (p, l_option_token, l_inline_value, a_next_token)
-                else
-                    fail ({STRING_32} "Unknown option: " + l_option_token)
-                end
-                i := i + 1
-            end
-        end
-
-    parse_named_parameter (a_parameter: CLI_PARAMETER; a_option_token: STRING_32;
-        a_inline_value, a_next_token: detachable STRING_32)
-            -- Store one option occurrence, sharing validation across all spellings.
-        do
-            next_token_consumed := False
-            if seen_names.has (a_parameter.name) and then not a_parameter.is_multiple then
-                fail ({STRING_32} "Repeated parameter: " + a_parameter.name)
-            elseif a_parameter.kind = a_parameter.Flag_kind then
-                if a_inline_value /= Void then
-                    fail ({STRING_32} "Flag does not accept a value: " + a_option_token)
-                else
-                    parsed_values.put_boolean (a_parameter.name, True)
-                    seen_names.force (True, a_parameter.name.twin)
-                end
-            elseif attached a_inline_value as l_value then
-                store_value (a_parameter, l_value)
-            elseif attached a_next_token as l_next_value then
-                next_token_consumed := True
-                store_value (a_parameter, l_next_value)
-            else
-                fail ({STRING_32} "Missing value for option: " + a_option_token)
-            end
-        end
-
-    named_parameter (a_token: STRING_32): detachable CLI_PARAMETER
-        do
-            across parameters as p loop
-                if p.kind /= p.Argument_kind then
-                    if a_token.count > 2 and then a_token.starts_with ("--") and then
-                        p.name.same_string (a_token.substring (3, a_token.count))
-                    then
-                        Result := p
-                    elseif a_token.count = 2 and then a_token [1] = '-' and then
-                        p.has_short_name and then p.short_name = a_token [2]
-                    then
-                        Result := p
-                    end
-                end
-            end
-        end
-
-    is_option_token (a_token: STRING_32): BOOLEAN
-        do
-            Result := a_token.count > 1 and then a_token [1] = '-'
-        end
-
-    is_negative_integer_argument (a_token: STRING_32; a_position: INTEGER): BOOLEAN
-            -- An integer operand may start with a minus sign.
-        do
-            Result := a_position <= positional_parameters.count and then
-                positional_parameters [a_position].value_type = positional_parameters [a_position].Integer_type and then
-                a_token.count > 1 and then a_token [1] = '-' and then a_token [2].is_digit
-        end
-
-    store_value (a_parameter: CLI_PARAMETER; a_token: STRING_32)
-        do
-            if a_parameter.value_type = a_parameter.Integer_type then
-                if a_token.is_integer_32 then
-                    if a_parameter.is_multiple then
-                        if seen_names.has (a_parameter.name) then
-                            parsed_values.append_integer (a_parameter.name, a_token.to_integer_32)
-                        else
-                            parsed_values.put_integer_list (a_parameter.name, {ARRAY [INTEGER]} <<a_token.to_integer_32>>)
-                        end
-                    else
-                        parsed_values.put_integer (a_parameter.name, a_token.to_integer_32)
-                    end
-                else
-                    fail ({STRING_32} "Invalid integer for " + a_parameter.name + ": " + a_token)
-                end
-            else
-                if a_parameter.is_multiple then
-                    if seen_names.has (a_parameter.name) then
-                        parsed_values.append_string (a_parameter.name, a_token)
-                    else
-                        parsed_values.put_string_list (a_parameter.name, {ARRAY [STRING_32]} <<a_token>>)
-                    end
-                else
-                    parsed_values.put_string (a_parameter.name, a_token)
-                end
-            end
-            if not has_error then
-                seen_names.force (True, a_parameter.name.twin)
-            end
-        end
-
     fail (a_message: STRING_32)
         do
             last_error := a_message.twin
         end
 
+feature {NONE} -- States
+
+    Reading_parameters: INTEGER = unique
+    Expecting_option_value: INTEGER = unique
+    Reading_positionals: INTEGER = unique
+
 feature {NONE} -- Capacity
 
     Default_capacity: INTEGER = 4
-            -- Initial capacity of internal collections.
 
 end

@@ -8,9 +8,12 @@ feature {NONE} -- Entry point
 
     make
         local
-            application: CLI_SINGLE_COMMAND_APPLICATION
+            application: CLI_APPLICATION
+            command: GREET_COMMAND
         do
-            create application.make (create {GREET_COMMAND})
+            create command
+            create application.make ("greet", command.description)
+            application.add_command (command)
             application.run
         end
 

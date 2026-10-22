@@ -10,7 +10,7 @@
             <void_safety support="all" use="all"/>
         </capability>
         <setting name="console_application" value="true"/>
-        <library name="cli" location="../../cli.ecf"/>
+        <library name="cli" readonly="false" location="../../cli.ecf"/>
         <library name="gobo_free_elks" location="${GOBO}/library/free_elks/library_${GOBO_EIFFEL}.ecf">
             <condition><custom name="GOBO_EIFFEL" value="ge"/></condition>
         </library>

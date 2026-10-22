@@ -17,6 +17,14 @@ feature {NONE} -- Initialization
 
 feature -- Status report
 
+    has_parameter (a_name: STRING_32): BOOLEAN
+            -- Is a value stored for this parameter, including an empty string or list?
+        do
+            Result := integer_values.has (a_name) or else string_values.has (a_name) or else
+                boolean_values.has (a_name) or else integer_list_values.has (a_name) or else
+                string_list_values.has (a_name)
+        end
+
     has_integer_parameter (a_name: STRING_32): BOOLEAN
         do
             Result := integer_values.has (a_name)
