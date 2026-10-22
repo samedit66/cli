@@ -18,6 +18,7 @@ See [building and verification](../../docs/development.md) for compiler setup an
 ## Usage
 
 ```sh
+./build/gobo/greet --help
 ./build/gobo/greet                       # Hello, world!
 ./build/gobo/greet Alice                 # Hello, Alice!
 ./build/gobo/greet Alice --prefix Hi      # Hi, Alice!

@@ -85,7 +85,12 @@ Help text is generated from registered parameter definitions:
 `application.show_help (name)` prints the application overview when `name` is
 empty; otherwise it prints the named command's help or reports an unknown command.
 
-To make help available from the command line, register `CLI_HELP_COMMAND`:
+Applications handle a standalone `--help` before parsing by default. With no
+command prefix it shows the application overview; after a command name it shows
+that command's help. A parameter named `help` in the selected command overrides
+this behavior. See [automatic help](syntax.md#automatic-help) for the exact rules.
+
+To also expose help as a command, register `CLI_HELP_COMMAND`:
 
 ```eiffel
 application.add_command (create {CLI_HELP_COMMAND}.make (application))
@@ -94,8 +99,8 @@ application.add_command (create {CLI_HELP_COMMAND}.make (application))
 This adds a command named `help`, not a `--help` flag. It accepts command words,
 such as `tool help remote add`. The
 [text application](../examples/text/src/text_application.e) demonstrates registration.
-Applications do not add a help flag or display help implicitly. A flag named
-`help` follows the same parsing and required-parameter rules as any other flag.
+An explicitly declared flag named `help` follows the same parsing and
+required-parameter rules as any other flag.
 
 ## Errors
 

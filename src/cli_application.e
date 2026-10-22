@@ -133,13 +133,22 @@ feature -- Execution
                     l_tokens.extend (a_tokens [i])
                     i := i + 1
                 end
-                create l_parser.make (match.command.parameters)
-                l_parser.parse (l_tokens)
-                if l_parser.is_successful then
-                    match.command.handle (l_parser.values)
+                if l_tokens.count = 1 and then l_tokens.first.same_string ("--help") and then
+                    across match.command.parameters as p all not p.name.same_string ("help") end
+                then
+                    -- A standalone help request bypasses parsing unless explicitly overridden.
+                    show_help (match.command.name)
                 else
-                    report_error (l_parser.error_message)
+                    create l_parser.make (match.command.parameters)
+                    l_parser.parse (l_tokens)
+                    if l_parser.is_successful then
+                        match.command.handle (l_parser.values)
+                    else
+                        report_error (l_parser.error_message)
+                    end
                 end
+            elseif a_tokens.upper = a_tokens.lower and then a_tokens [a_tokens.lower].same_string ("--help") then
+                show_help ("")
             elseif a_tokens.lower > a_tokens.upper then
                 report_error ("Missing command.")
             else

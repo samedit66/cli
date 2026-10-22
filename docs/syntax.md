@@ -25,8 +25,22 @@ collide with command words regardless of their parameter's name.
 
 An application containing only one command with an empty name passes all tokens
 to that command, without a command prefix. `CLI_APPLICATION` does not insert a
-help flag or display help implicitly. A registered `CLI_HELP_COMMAND` is an
-ordinary command and accepts multiword names.
+help parameter. It handles a standalone `--help` request before parsing, as
+described below. A registered `CLI_HELP_COMMAND` is an ordinary command and
+accepts multiword names.
+
+## Automatic help
+
+`tool --help` displays the application overview. `tool pack --help` displays
+help for the selected command, including multiword commands. The entire remainder
+after the command name must be exactly one token, `--help`. Required parameters
+are not checked and the command handler is not called for this request.
+
+If the selected command declares a parameter named `help`, that definition takes
+precedence and all input follows normal parsing and validation. No automatic `-h`
+alias is reserved. Input such as `tool pack archive.zip --help` follows normal
+parsing; `--password=--help` is a value, and `-- --help` is positional input.
+The parser itself has no special help behavior.
 
 Command names must be unique. Nonempty names use single spaces between words,
 with no leading or trailing spaces, tabs, or line breaks. No command word may
