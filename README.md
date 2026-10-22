@@ -1,3 +1,5 @@
+<div align="center">
+
 # cli
 
 [![ISE Eiffel](https://img.shields.io/badge/toolchain-ISE%20Eiffel-17365D)](https://www.eiffel.com/)
@@ -9,6 +11,15 @@ The library supports defaults, lists, multiword command names, and generated hel
 text. It is void-safe, uses ELKS classes, and supports EiffelStudio and Gobo.
 
 Inspired by Python's [Cleo](https://github.com/python-poetry/cleo).
+
+</div>
+
+## Highlights
+
+- 💅 Describe your commands. Let cli deal with the [argument drama](docs/usage.md#commands-and-parameters).
+- 🎯 Typed values, explicit defaults. No stringly-typed jumpscares. Meet [CLI_COMMAND_INPUT](src/cli_command_input.e).
+- 🗣️ Multiword commands. Because one word is sometimes not enough. See [arc](examples/arc/README.md).
+- 📖 [`--help` included](docs/syntax.md#automatic-help). Your users can stop guessing.
 
 ## Installation
 
