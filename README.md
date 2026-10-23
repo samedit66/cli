@@ -5,10 +5,8 @@
 [![ISE Eiffel](https://img.shields.io/badge/toolchain-ISE%20Eiffel-17365D)](https://www.eiffel.com/)
 [![Gobo Eiffel](https://img.shields.io/badge/toolchain-Gobo%20Eiffel-8B5A2B)](https://www.gobosoft.com/)
 
-A small Eiffel library for defining command-line arguments, options, and flags.
-Commands declare their parameters and receive typed values after parsing.
-The library supports defaults, lists, multiword command names, and generated help
-text. It is void-safe, uses ELKS classes, and supports EiffelStudio and Gobo.
+A small Eiffel library for defining command-line arguments, options, and flags. 
+It is void-safe, uses ELKS classes, and supports EiffelStudio and Gobo.
 
 Inspired by Python's [Cleo](https://github.com/python-poetry/cleo).
 
