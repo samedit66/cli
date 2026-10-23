@@ -30,17 +30,23 @@ feature -- Definition
     add_command (a_command: CLI_COMMAND)
             -- Register a command and declare its interface.
         require
-            canonical_name: not a_command.name.starts_with (" ") and then
-                not a_command.name.ends_with (" ") and then not a_command.name.has_substring ("  ") and then
-                not a_command.name.has ('%T') and then not a_command.name.has ('%N') and then
-                not a_command.name.has ('%R')
-            no_option_words: across a_command.name.split (' ') as word all not word.starts_with ("-") end
+            valid_name: is_valid_command_name (a_command.name)
             unique_name: not has_command (a_command.name)
         do
             a_command.interface
             commands.extend (a_command)
         ensure
             registered: has_command (a_command.name)
+        end
+
+    is_valid_command_name (a_name: STRING_32): BOOLEAN
+            -- Is this an empty default name or a canonical sequence of non-option words?
+        do
+            Result := not a_name.starts_with (" ") and then
+                not a_name.ends_with (" ") and then not a_name.has_substring ("  ") and then
+                not a_name.has ('%T') and then not a_name.has ('%N') and then
+                not a_name.has ('%R') and then
+                across a_name.split (' ') as word all not word.starts_with ("-") end
         end
 
     has_command (a_name: STRING_32): BOOLEAN

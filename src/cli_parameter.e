@@ -24,7 +24,7 @@ feature {NONE} -- Initialization
 
     make_integer_argument (a_name, a_description: STRING_32)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             name := a_name.twin
             description := a_description.twin
@@ -36,7 +36,7 @@ feature {NONE} -- Initialization
 
     make_optional_integer_argument (a_name, a_description: STRING_32; a_default: INTEGER)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             name := a_name.twin
             description := a_description.twin
@@ -49,7 +49,7 @@ feature {NONE} -- Initialization
 
     make_integer_option (a_name, a_description: STRING_32)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             name := a_name.twin
             description := a_description.twin
@@ -61,7 +61,7 @@ feature {NONE} -- Initialization
 
     make_optional_integer_option (a_name, a_description: STRING_32; a_default: INTEGER)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             name := a_name.twin
             description := a_description.twin
@@ -74,7 +74,7 @@ feature {NONE} -- Initialization
 
     make_string_argument (a_name, a_description: STRING_32)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             name := a_name.twin
             description := a_description.twin
@@ -86,7 +86,7 @@ feature {NONE} -- Initialization
 
     make_optional_string_argument (a_name, a_description: STRING_32; a_default: STRING_32)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             name := a_name.twin
             description := a_description.twin
@@ -99,7 +99,7 @@ feature {NONE} -- Initialization
 
     make_string_option (a_name, a_description: STRING_32)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             name := a_name.twin
             description := a_description.twin
@@ -111,7 +111,7 @@ feature {NONE} -- Initialization
 
     make_optional_string_option (a_name, a_description: STRING_32; a_default: STRING_32)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             name := a_name.twin
             description := a_description.twin
@@ -124,7 +124,7 @@ feature {NONE} -- Initialization
 
     make_flag (a_name, a_description: STRING_32)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             name := a_name.twin
             description := a_description.twin
@@ -136,7 +136,7 @@ feature {NONE} -- Initialization
 
     make_integer_list_argument (a_name, a_description: STRING_32)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             make_integer_argument (a_name, a_description)
             is_multiple := True
@@ -144,7 +144,7 @@ feature {NONE} -- Initialization
 
     make_optional_integer_list_argument (a_name, a_description: STRING_32; a_default: ITERABLE [INTEGER])
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             make_optional_integer_argument (a_name, a_description, 0)
             is_multiple := True
@@ -155,7 +155,7 @@ feature {NONE} -- Initialization
 
     make_integer_list_option (a_name, a_description: STRING_32)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             make_integer_option (a_name, a_description)
             is_multiple := True
@@ -163,7 +163,7 @@ feature {NONE} -- Initialization
 
     make_optional_integer_list_option (a_name, a_description: STRING_32; a_default: ITERABLE [INTEGER])
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             make_optional_integer_option (a_name, a_description, 0)
             is_multiple := True
@@ -174,7 +174,7 @@ feature {NONE} -- Initialization
 
     make_string_list_argument (a_name, a_description: STRING_32)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             make_string_argument (a_name, a_description)
             is_multiple := True
@@ -182,7 +182,7 @@ feature {NONE} -- Initialization
 
     make_optional_string_list_argument (a_name, a_description: STRING_32; a_default: ITERABLE [STRING_32])
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             make_optional_string_argument (a_name, a_description, "")
             is_multiple := True
@@ -193,7 +193,7 @@ feature {NONE} -- Initialization
 
     make_string_list_option (a_name, a_description: STRING_32)
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             make_string_option (a_name, a_description)
             is_multiple := True
@@ -201,13 +201,21 @@ feature {NONE} -- Initialization
 
     make_optional_string_list_option (a_name, a_description: STRING_32; a_default: ITERABLE [STRING_32])
         require
-            valid_name: not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            valid_name: is_valid_name (a_name)
         do
             make_optional_string_option (a_name, a_description, "")
             is_multiple := True
             across a_default as value loop
                 string_list_default.extend (value.twin)
             end
+        end
+
+feature -- Validation
+
+    is_valid_name (a_name: STRING_32): BOOLEAN
+            -- Is `a_name` a nonempty parameter name without separators or a leading dash?
+        do
+            Result := not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
         end
 
 feature -- Access

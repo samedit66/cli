@@ -15,6 +15,7 @@ feature {NONE} -- Entry point
         do
             create l_arguments
             if l_arguments.argument_count = 0 then
+                test_definition_validation
                 test_values
                 test_inline_values
                 test_failures
@@ -51,6 +52,41 @@ feature {NONE} -- Entry point
         end
 
 feature {NONE} -- Parser tests
+
+    test_definition_validation
+        local
+            l_parameter: CLI_PARAMETER
+            l_application: CLI_APPLICATION
+            l_command: ROUTING_COMMAND
+        do
+            create l_parameter.make_flag ("verbose", "")
+            create l_application.make ("tool", "")
+            create l_command.make ("")
+            check
+                parameter_name: l_parameter.is_valid_name ("file-name")
+                empty_parameter: not l_parameter.is_valid_name ("")
+                spaced_parameter: not l_parameter.is_valid_name ("file name")
+                equals_parameter: not l_parameter.is_valid_name ("file=name")
+                dashed_parameter: not l_parameter.is_valid_name ("-file")
+                default_command: l_application.is_valid_command_name ("")
+                multiword_command: l_application.is_valid_command_name ("remote add")
+                leading_space: not l_application.is_valid_command_name (" remote")
+                trailing_space: not l_application.is_valid_command_name ("remote ")
+                double_space: not l_application.is_valid_command_name ("remote  add")
+                tab: not l_application.is_valid_command_name ("remote%Tadd")
+                newline: not l_application.is_valid_command_name ("remote%Nadd")
+                carriage_return: not l_application.is_valid_command_name ("remote%Radd")
+                option_word: not l_application.is_valid_command_name ("remote -add")
+                initially_empty: not l_command.has_parameter ("files")
+            end
+            l_command.add_optional_string_list_argument ("files", "", {ARRAY [STRING_32]} <<>>)
+            check
+                registered_name: l_command.has_parameter ("files")
+                positional_list: l_command.has_positional_list
+                optional_argument: l_command.has_optional_argument
+            end
+        end
+
 
     test_default_help
         local

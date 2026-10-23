@@ -102,12 +102,48 @@ feature -- Values
             end
         end
 
+feature {CLI_PARSER} -- Population availability
+
+    can_put_integer (a_name: STRING_32): BOOLEAN
+            -- Can this name store a value of this type without conflicting with another type?
+        do
+            Result := not has_string_parameter (a_name) and not has_boolean_parameter (a_name) and
+                not has_integer_list_parameter (a_name) and not has_string_list_parameter (a_name)
+        end
+
+    can_put_string (a_name: STRING_32): BOOLEAN
+            -- Can this name store a value of this type without conflicting with another type?
+        do
+            Result := not has_integer_parameter (a_name) and not has_boolean_parameter (a_name) and
+                not has_integer_list_parameter (a_name) and not has_string_list_parameter (a_name)
+        end
+
+    can_put_boolean (a_name: STRING_32): BOOLEAN
+            -- Can this name store a value of this type without conflicting with another type?
+        do
+            Result := not has_integer_parameter (a_name) and not has_string_parameter (a_name) and
+                not has_integer_list_parameter (a_name) and not has_string_list_parameter (a_name)
+        end
+
+    can_put_integer_list (a_name: STRING_32): BOOLEAN
+            -- Can this name store a value of this type without conflicting with another type?
+        do
+            Result := not has_integer_parameter (a_name) and not has_string_parameter (a_name) and
+                not has_boolean_parameter (a_name) and not has_string_list_parameter (a_name)
+        end
+
+    can_put_string_list (a_name: STRING_32): BOOLEAN
+            -- Can this name store a value of this type without conflicting with another type?
+        do
+            Result := not has_integer_parameter (a_name) and not has_string_parameter (a_name) and
+                not has_boolean_parameter (a_name) and not has_integer_list_parameter (a_name)
+        end
+
 feature {CLI_PARSER} -- Population
 
     put_integer (a_name: STRING_32; a_value: INTEGER)
         require
-            consistent_type: not has_string_parameter (a_name) and not has_boolean_parameter (a_name) and
-                not has_integer_list_parameter (a_name) and not has_string_list_parameter (a_name)
+            consistent_type: can_put_integer (a_name)
         do
             integer_values.force (a_value, a_name.twin)
         ensure
@@ -116,8 +152,7 @@ feature {CLI_PARSER} -- Population
 
     put_string (a_name, a_value: STRING_32)
         require
-            consistent_type: not has_integer_parameter (a_name) and not has_boolean_parameter (a_name) and
-                not has_integer_list_parameter (a_name) and not has_string_list_parameter (a_name)
+            consistent_type: can_put_string (a_name)
         do
             string_values.force (a_value.twin, a_name.twin)
         ensure
@@ -126,8 +161,7 @@ feature {CLI_PARSER} -- Population
 
     put_boolean (a_name: STRING_32; a_value: BOOLEAN)
         require
-            consistent_type: not has_integer_parameter (a_name) and not has_string_parameter (a_name) and
-                not has_integer_list_parameter (a_name) and not has_string_list_parameter (a_name)
+            consistent_type: can_put_boolean (a_name)
         do
             boolean_values.force (a_value, a_name.twin)
         ensure
@@ -137,8 +171,7 @@ feature {CLI_PARSER} -- Population
     put_integer_list (a_name: STRING_32; a_values: ITERABLE [INTEGER])
             -- Replace the whole list, copying caller-owned values.
         require
-            consistent_type: not has_integer_parameter (a_name) and not has_string_parameter (a_name) and
-                not has_boolean_parameter (a_name) and not has_string_list_parameter (a_name)
+            consistent_type: can_put_integer_list (a_name)
         local
             items: ARRAYED_LIST [INTEGER]
         do
@@ -161,8 +194,7 @@ feature {CLI_PARSER} -- Population
     put_string_list (a_name: STRING_32; a_values: ITERABLE [STRING_32])
             -- Replace the whole list, copying caller-owned values.
         require
-            consistent_type: not has_integer_parameter (a_name) and not has_string_parameter (a_name) and
-                not has_boolean_parameter (a_name) and not has_integer_list_parameter (a_name)
+            consistent_type: can_put_string_list (a_name)
         local
             items: ARRAYED_LIST [STRING_32]
         do

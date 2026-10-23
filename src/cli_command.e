@@ -231,6 +231,26 @@ feature -- Short names
                     (p.has_short_name and then p.short_name = a_short_name) end
         end
 
+feature -- Parameter availability
+
+    has_parameter (a_name: STRING_32): BOOLEAN
+            -- Is a parameter with this name already declared?
+        do
+            Result := across parameters as p some p.name.same_string (a_name) end
+        end
+
+    has_positional_list: BOOLEAN
+            -- Is a positional list already declared?
+        do
+            Result := across parameters as p some p.kind = p.Argument_kind and then p.is_multiple end
+        end
+
+    has_optional_argument: BOOLEAN
+            -- Is an optional positional argument already declared?
+        do
+            Result := across parameters as p some p.kind = p.Argument_kind and then p.is_optional end
+        end
+
 feature -- Short name availability
 
     can_set_short_name (a_name: STRING_32; a_short_name: CHARACTER_32): BOOLEAN
@@ -391,11 +411,11 @@ feature {NONE} -- Parameter definitions
     register_parameter (a_parameter: CLI_PARAMETER)
             -- Register a definition with a unique name and valid position.
         require
-            unique_name: across parameters as p all not p.name.same_string (a_parameter.name) end
+            unique_name: not has_parameter (a_parameter.name)
             positional_list_last: a_parameter.kind = a_parameter.Argument_kind implies
-                across parameters as p all p.kind /= p.Argument_kind or else not p.is_multiple end
+                not has_positional_list
             required_argument_before_optional: a_parameter.kind = a_parameter.Argument_kind and then not a_parameter.is_optional implies
-                across parameters as p all p.kind /= p.Argument_kind or else not p.is_optional end
+                not has_optional_argument
         do
             parameters.extend (a_parameter)
         ensure

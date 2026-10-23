@@ -37,7 +37,10 @@ Arguments and options support strings, 32-bit integers, and lists of either type
 Use `add_optional_*` with an explicit default for optional parameters.
 Use `set_short_name ("port", 'p')` to assign a one-letter alias.
 The [parameter rules](syntax.md#parameter-definitions) cover declaration order,
-unique names, and positional lists. The [defaults rules](syntax.md#defaults-and-completion)
+unique names, and positional lists.
+`CLI_PARAMETER.is_valid_name` checks parameter-name syntax. A command exposes
+`has_parameter`, `has_positional_list`, and `has_optional_argument` to inspect
+its current declarations. The [defaults rules](syntax.md#defaults-and-completion)
 cover absent parameters and replacement of list defaults.
 
 The handler receives `CLI_COMMAND_INPUT`. Its typed queries require a value of
@@ -48,7 +51,9 @@ changing the returned data does not change the stored input.
 ## Applications
 
 `CLI_APPLICATION.make` takes the application name and description. Register each
-command with `add_command`, then call `run`. It reads process arguments through
+command with `add_command`, then call `run`.
+`is_valid_command_name` checks command-name syntax, including the empty default
+name; `has_command` checks whether a name is already registered. It reads process arguments through
 `ARGUMENTS_32`. Use `run_with_tokens` to provide tokens directly, excluding the
 executable name. See the [text application](../examples/text/src/text_application.e).
 
