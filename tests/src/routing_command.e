@@ -1,3 +1,8 @@
+note
+    description: "Command-routing fixtures that report selected commands and parsed values."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     ROUTING_COMMAND
 
@@ -11,6 +16,7 @@ create
 feature {NONE} -- Initialization
 
     make (a_name: STRING_32)
+            -- Create a routing fixture with `a_name`.
         do
             name := a_name.twin
             requires_target := name.same_string ("remote required")
@@ -26,10 +32,13 @@ feature {NONE} -- Initialization
 feature -- Definition
 
     name: STRING_32
+            -- Command name used for selection.
 
     description: STRING_32 = "Report the selected command and its values"
+            -- Description shown in generated help.
 
     interface
+            -- Declare the command parameters.
         do
             add_flag ("verbose", "Verbose flag")
             set_short_name ("verbose", 'v')
@@ -55,6 +64,7 @@ feature -- Definition
 feature -- Execution
 
     handle (a_values: CLI_COMMAND_INPUT)
+            -- Report the selected command and its parsed values.
         do
             io.put_string_32 ({STRING_32} "command=" + name + "%N")
             io.put_string_32 ({STRING_32} "verbose=" + a_values.boolean_parameter ("verbose").out + "%N")

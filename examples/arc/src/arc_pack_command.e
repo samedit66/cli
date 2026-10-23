@@ -1,3 +1,8 @@
+note
+    description: "Archive-style pack commands that report parsed values only."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     ARC_PACK_COMMAND
 
@@ -7,10 +12,13 @@ inherit
 feature -- Definition
 
     name: STRING_32 = "pack"
+            -- Command name used for selection.
 
     description: STRING_32 = "Describe archive creation"
+            -- Description shown in generated help.
 
     interface
+            -- Declare the command parameters.
         do
             add_string_argument ("archive", "Output archive path")
             add_optional_string_list_argument ("source", "Source paths", {ARRAY [STRING_32]} <<>>)
@@ -22,6 +30,7 @@ feature -- Definition
 feature -- Execution
 
     handle (a_input: CLI_COMMAND_INPUT)
+            -- Report the selected command and its parsed values.
         do
             io.put_string_32 ("command=pack%N")
             io.put_string_32 ({STRING_32} "archive=" + a_input.string_parameter ("archive") + "%N")

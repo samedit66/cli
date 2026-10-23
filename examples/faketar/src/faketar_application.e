@@ -1,3 +1,8 @@
+note
+    description: "Entry points for the faketar example application."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     FAKETAR_APPLICATION
 
@@ -7,6 +12,7 @@ create
 feature {NONE} -- Entry point
 
     make
+            -- Run the example application.
         local
             application: CLI_APPLICATION
             command: FAKETAR_COMMAND

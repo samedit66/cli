@@ -1,3 +1,8 @@
+note
+    description: "Archive-style root commands that report parsed values only."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     ARC_ROOT_COMMAND
 
@@ -7,10 +12,13 @@ inherit
 feature -- Definition
 
     name: STRING_32 = ""
+            -- Command name used for selection.
 
     description: STRING_32 = "Recognize root flags"
+            -- Description shown in generated help.
 
     interface
+            -- Declare the command parameters.
         do
             add_flag ("help", "Request application help")
             add_flag ("version", "Request version information")

@@ -1,3 +1,8 @@
+note
+    description: "Command definitions and handlers for typed command-line input."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 deferred class
     CLI_COMMAND
 

@@ -1,3 +1,8 @@
+note
+    description: "Commands that print text a specified number of times."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     REPEAT_COMMAND
 
@@ -7,10 +12,13 @@ inherit
 feature -- Definition
 
     name: STRING_32 = "repeat"
+            -- Command name used for selection.
 
     description: STRING_32 = "Print text a specified number of times"
+            -- Description shown in generated help.
 
     interface
+            -- Declare the command parameters.
         do
             add_string_argument ("text", "Text to repeat")
             add_integer_option ("count", "Number of repetitions (zero or greater)")
@@ -24,6 +32,7 @@ feature -- Definition
 feature -- Execution
 
     handle (a_input: CLI_COMMAND_INPUT)
+            -- Print the text the requested number of times.
         local
             count, i: INTEGER
             text, line: STRING_32

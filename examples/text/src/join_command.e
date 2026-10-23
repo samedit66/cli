@@ -1,3 +1,8 @@
+note
+    description: "Commands that join words into a single line."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     JOIN_COMMAND
 
@@ -7,10 +12,13 @@ inherit
 feature -- Definition
 
     name: STRING_32 = "join"
+            -- Command name used for selection.
 
     description: STRING_32 = "Join words into a single line"
+            -- Description shown in generated help.
 
     interface
+            -- Declare the command parameters.
         do
             add_string_list_argument ("parts", "Text parts to join")
             add_optional_string_option ("separator", "Separator between parts", " ")
@@ -22,6 +30,7 @@ feature -- Definition
 feature -- Execution
 
     handle (a_input: CLI_COMMAND_INPUT)
+            -- Print the joined words.
         local
             parts: ARRAYED_LIST [STRING_32]
             separator, result_text: STRING_32

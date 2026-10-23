@@ -1,3 +1,8 @@
+note
+    description: "Explicit help commands for an application and its registered commands."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     CLI_HELP_COMMAND
 
@@ -10,6 +15,7 @@ create
 feature {NONE} -- Initialization
 
     make (a_application: CLI_APPLICATION)
+            -- Create a help command for `a_application`.
         do
             application := a_application
         end
@@ -17,12 +23,15 @@ feature {NONE} -- Initialization
 feature -- Definition
 
     name: STRING_32 = "help"
+            -- Command name used for selection.
 
     description: STRING_32 = "Show application or command help"
+            -- Description shown in generated help.
 
 feature -- Interface definition
 
     interface
+            -- Declare the command parameters.
         do
             add_optional_string_list_argument ("command", "Command words to describe", {ARRAY [STRING_32]} <<>>)
         end
@@ -30,6 +39,7 @@ feature -- Interface definition
 feature -- Execution
 
     handle (a_values: CLI_COMMAND_INPUT)
+            -- Show application help or help for the supplied command words.
         local
             l_name: STRING_32
         do

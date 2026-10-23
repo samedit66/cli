@@ -1,3 +1,8 @@
+note
+    description: "Explicit splitting of parsed string values."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     CLI_STRING_ROUTINES
 

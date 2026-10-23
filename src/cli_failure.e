@@ -1,3 +1,8 @@
+note
+    description: "Fatal diagnostics with process termination."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class CLI_FAILURE
         -- Shared fatal diagnostic and process termination.
 

@@ -1,3 +1,8 @@
+note
+    description: "Archive-style command definitions that report parsed values only."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     FAKETAR_COMMAND
 
@@ -7,10 +12,13 @@ inherit
 feature -- Definition
 
     name: STRING_32 = ""
+            -- Command name used for selection.
 
     description: STRING_32 = "Report parsed parameters only; no archive or file operations.%NShort flags combine (-cvz). A value option must end its group:%N-cvzf archive.tar or -cvzf=archive.tar. Repeat list options for more values."
+            -- Description shown in generated help.
 
     interface
+            -- Declare the command parameters.
         do
             add_flag ("create", "Report the create flag")
             set_short_name ("create", 'c')
@@ -42,6 +50,7 @@ feature -- Definition
 feature -- Execution
 
     handle (a_input: CLI_COMMAND_INPUT)
+            -- Report the selected command and its parsed values.
         do
             io.put_string_32 ({STRING_32} "create=" + a_input.boolean_parameter ("create").out + "%N")
             io.put_string_32 ({STRING_32} "extract=" + a_input.boolean_parameter ("extract").out + "%N")

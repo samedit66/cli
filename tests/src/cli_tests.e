@@ -1,3 +1,8 @@
+note
+    description: "Assertion-enabled parser and command-routing tests."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     CLI_TESTS
 
@@ -7,6 +12,7 @@ create
 feature {NONE} -- Entry point
 
     make
+            -- Run parser tests or the requested routing fixture.
         local
             l_arguments: ARGUMENTS_32
             l_application: CLI_APPLICATION

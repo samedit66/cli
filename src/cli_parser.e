@@ -1,3 +1,8 @@
+note
+    description: "Single-use parsers for command-line parameter definitions and tokens."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     CLI_PARSER
 
@@ -153,11 +158,13 @@ feature -- Status report
             -- Has parsing finished?
 
     is_successful: BOOLEAN
+            -- Has parsing finished without an error?
         do
             Result := is_parsed and then not has_error
         end
 
     has_error: BOOLEAN
+            -- Has parsing failed?
         do
             Result := not last_error.is_empty
         end
@@ -173,6 +180,7 @@ feature -- Result
         end
 
     error_message: STRING_32
+            -- Copy of the diagnostic from a failed parse.
         require
             failed: has_error
         do

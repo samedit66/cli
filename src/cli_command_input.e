@@ -1,3 +1,8 @@
+note
+    description: "Typed parameter values from a successful parse."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     CLI_COMMAND_INPUT
 
@@ -7,6 +12,7 @@ create
 feature {NONE} -- Initialization
 
     make
+            -- Create an empty set of typed parameter values.
         do
             create integer_values.make (Default_capacity)
             create string_values.make (Default_capacity)
@@ -26,26 +32,31 @@ feature -- Status report
         end
 
     has_integer_parameter (a_name: STRING_32): BOOLEAN
+            -- Is a integer value stored for `a_name`?
         do
             Result := integer_values.has (a_name)
         end
 
     has_string_parameter (a_name: STRING_32): BOOLEAN
+            -- Is a string value stored for `a_name`?
         do
             Result := string_values.has (a_name)
         end
 
     has_boolean_parameter (a_name: STRING_32): BOOLEAN
+            -- Is a boolean value stored for `a_name`?
         do
             Result := boolean_values.has (a_name)
         end
 
     has_integer_list_parameter (a_name: STRING_32): BOOLEAN
+            -- Is a integer list value stored for `a_name`?
         do
             Result := integer_list_values.has (a_name)
         end
 
     has_string_list_parameter (a_name: STRING_32): BOOLEAN
+            -- Is a string list value stored for `a_name`?
         do
             Result := string_list_values.has (a_name)
         end
@@ -53,6 +64,7 @@ feature -- Status report
 feature -- Values
 
     integer_parameter (a_name: STRING_32): INTEGER
+            -- Stored integer value for `a_name`.
         require
             known_integer_parameter: has_integer_parameter (a_name)
         do
@@ -70,6 +82,7 @@ feature -- Values
         end
 
     boolean_parameter (a_name: STRING_32): BOOLEAN
+            -- Stored Boolean value for `a_name`.
         require
             known_boolean_parameter: has_boolean_parameter (a_name)
         do
@@ -142,6 +155,7 @@ feature {CLI_PARSER} -- Population availability
 feature {CLI_PARSER} -- Population
 
     put_integer (a_name: STRING_32; a_value: INTEGER)
+            -- Store a integer value for `a_name`.
         require
             consistent_type: can_put_integer (a_name)
         do
@@ -151,6 +165,7 @@ feature {CLI_PARSER} -- Population
         end
 
     put_string (a_name, a_value: STRING_32)
+            -- Store a copy of `a_value` for `a_name`.
         require
             consistent_type: can_put_string (a_name)
         do
@@ -160,6 +175,7 @@ feature {CLI_PARSER} -- Population
         end
 
     put_boolean (a_name: STRING_32; a_value: BOOLEAN)
+            -- Store a boolean value for `a_name`.
         require
             consistent_type: can_put_boolean (a_name)
         do
@@ -183,6 +199,7 @@ feature {CLI_PARSER} -- Population
         end
 
     append_integer (a_name: STRING_32; a_value: INTEGER)
+            -- Append `a_value` to the stored integer list for `a_name`.
         require
             known_list_parameter: has_integer_list_parameter (a_name)
         do
@@ -206,6 +223,7 @@ feature {CLI_PARSER} -- Population
         end
 
     append_string (a_name: STRING_32; a_value: STRING_32)
+            -- Append a copy of `a_value` to the stored string list for `a_name`.
         require
             known_list_parameter: has_string_list_parameter (a_name)
         do

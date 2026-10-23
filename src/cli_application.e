@@ -1,3 +1,8 @@
+note
+    description: "Command-line applications with command selection and generated help."
+    author: "samedit66"
+    email: "samedit66@yandex.ru"
+
 class
     CLI_APPLICATION
 
@@ -13,6 +18,7 @@ create
 feature {NONE} -- Initialization
 
     make (a_name, a_description: STRING_32)
+            -- Create an application with `a_name` and `a_description`.
         require
             non_empty_name: not a_name.is_empty
         do
@@ -24,8 +30,10 @@ feature {NONE} -- Initialization
 feature -- Definition
 
     name: STRING_32
+            -- Command name used for selection.
 
     description: STRING_32
+            -- Description shown in generated help.
 
     add_command (a_command: CLI_COMMAND)
             -- Register a command and declare its interface.
@@ -50,6 +58,7 @@ feature -- Definition
         end
 
     has_command (a_name: STRING_32): BOOLEAN
+            -- Is a command with `a_name` registered?
         do
             Result := across commands as c some c.name.same_string (a_name) end
         end
@@ -76,6 +85,7 @@ feature -- Help
         end
 
     command_help (a_name: STRING_32): STRING_32
+            -- Fresh help for the registered command named `a_name`.
         require
             known_command: has_command (a_name)
         do
