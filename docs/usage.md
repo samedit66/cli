@@ -12,7 +12,7 @@ calls its handler only after parsing succeeds.
 | [CLI_COMMAND_INPUT](../src/cli_command_input.e) | Provide typed values to the handler |
 | [CLI_PARSER](../src/cli_parser.e) | Parse tokens against parameter definitions |
 | [CLI_HELP_COMMAND](../src/cli_help_command.e) | Expose generated help as an ordinary command |
-| [CLI_STRING_ROUTINES](../src/cli_string_routines.e) | Split parsed strings explicitly |
+| [CLI_STRING_ROUTINES](../src/cli_string_routines.e) | Validate parameter names and split strings explicitly |
 | [CLI_FAILURE](../src/cli_failure.e) | Report a fatal diagnostic and terminate the process |
 
 The source files define the feature signatures and contracts. The
@@ -21,8 +21,23 @@ The source files define the feature signatures and contracts. The
 ## Commands and parameters
 
 Inherit `CLI_COMMAND`, define `name` and `description`, declare parameters in
-`interface`, and implement `handle`. Registration calls `interface`; application
-code does not need to call it separately. See the
+`interface`, and implement `handle`. A CLI program has one `CLI_APPLICATION`,
+which owns command registration and execution. Commands belong to that
+application; sharing them between applications is outside this usage model.
+`CLI_APPLICATION` calls `interface` once per command instance on registration.
+Do not call it directly. A direct repeat call executes the command's body again:
+repeated declarations violate name uniqueness, and repeated alias assignment
+violates the one-assignment contract. Command names must be unique.
+`CLI_COMMAND.name` returns `READABLE_STRING_32`. Fixed names may be declared as
+`name: STRING_32 = "greet"`. Names are declarative metadata: do not change their
+value after registration, including during `interface`. This is a client
+obligation rather than a restriction enforced by an immutable result type.
+After the first `interface` call, the command adds an automatic help action unless
+`help` is explicitly declared. Later declarations may replace automatic help or
+claim its `h` alias before execution.
+Public `add_*` and `set_short_name` calls may extend definitions before `run` or
+`run_with_tokens`. Keep definitions unchanged during execution. Each run creates
+a new parser, so the application may be run again. See the
 [greet command](../examples/greet/src/greet_command.e) for a complete definition.
 
 | Parameter | Declaration | Input | Value access |
@@ -53,21 +68,20 @@ changing the returned data does not change the stored input.
 `CLI_APPLICATION.make` takes the application name and description. Register each
 command with `add_command`, then call `run`.
 `is_valid_command_name` checks command-name syntax, including the empty default
-name; `has_command` checks whether a name is already registered. It reads process arguments through
-`ARGUMENTS_32`. Use `run_with_tokens` to provide tokens directly, excluding the
+name; `has_command` checks whether a name is already registered.
+`run` reads process arguments through `ARGUMENTS_32`. Use `run_with_tokens` to provide tokens directly, excluding the
 executable name. See the [text application](../examples/text/src/text_application.e).
 
 A command with `name = ""` accepts input without a command prefix. An application
 with only that command behaves as a single-command utility:
 
 ```eiffel
-create command
-create application.make ("greet", command.description)
-application.add_command (command)
+create application.make_single_command ("greet", create {GREET_COMMAND})
 application.run
 ```
 
-Here, `command` is a `GREET_COMMAND` whose name is empty. The complete entry point
+`make_single_command` requires a command whose name is empty and uses its
+description as the application description. The complete entry point
 is in [greet_application.e](../examples/greet/src/greet_application.e).
 
 Command names may also contain several words. An empty command can coexist with
@@ -84,16 +98,22 @@ Help text is generated from registered parameter definitions:
 | `application.help` | Application overview with the registered commands |
 | `application.command_help ("pack")` | Parameter help for a named command |
 | `application.command_help ("")` | Parameter help for the default command |
-| `command.help (invocation)` | Parameter help using an explicit invocation string |
+| `command.help (invocation)` | Parameter help, including initialized automatic help, using an explicit invocation string |
 
 `command_help` requires the requested command to be registered.
-`application.show_help (name)` prints the application overview when `name` is
-empty; otherwise it prints the named command's help or reports an unknown command.
+`CLI_HELP_COMMAND` without command words prints the application overview, even
+when a default command exists. With command words it prints that command's help.
 
-Applications handle a standalone `--help` before parsing by default. With no
-command prefix it shows the application overview; after a command name it shows
-that command's help. A parameter named `help` in the selected command overrides
-this behavior. See [automatic help](syntax.md#automatic-help) for the exact rules.
+`application.show_help (name)` prints help for a registered command, including
+the empty default command. With an empty name and no default command, it prints
+the application overview. Other unknown names report an error.
+
+Applications provide `--help` and, when free, `-h` for every command that does
+not declare a parameter named `help`. These flags show detailed command help,
+including parameter types, defaults, aliases, and the automatic help spellings.
+They bypass missing required parameters and do not call the handler. With no
+selected command, a standalone `--help` or `-h` shows the application overview.
+See [automatic help](syntax.md#automatic-help) for precedence and token rules.
 
 To also expose help as a command, register `CLI_HELP_COMMAND`:
 
@@ -131,25 +151,42 @@ or undo earlier work.
 
 Use `CLI_PARSER` when command selection and process handling are managed elsewhere.
 Pass an iterable of `CLI_PARAMETER` definitions to `make` and a
-`READABLE_INDEXABLE [STRING_32]` of input tokens to `parse`:
+`READABLE_INDEXABLE [READABLE_STRING_32]` of input tokens to `parse`:
 
 ```eiffel
 create parser.make (parameters)
 parser.parse (tokens)
 if parser.is_successful then
     values := parser.values
-else
+elseif parser.has_error then
     message := parser.error_message
+else
+    -- A help action was requested; display the caller's help text.
 end
 ```
 
-Tokens exclude the executable and command prefix. Definitions must remain
+Parameter and application metadata use immutable strings; command names,
+descriptions, and name-query arguments use readable strings. String defaults, list-default elements,
+input tokens, and diagnostics also accept readable strings, including immutable
+strings. List-default queries return copies,
+including copies of string elements.
+
+Tokens exclude the executable and command prefix. Definitions must have unique names and short aliases, with required arguments
+before optional arguments and a positional list last. `are_valid_definitions`
+checks these requirements; `make` requires them. Definitions must remain
 unchanged until parsing finishes. The parser reads tokens without retaining or
 changing them. Each parser accepts one `parse` call; create another parser for
 another input.
 
-The parser performs no I/O. `values` is available only after a complete successful
-parse. On failure, `error_message` returns the diagnostic. There is no separately
+The parser performs no I/O. A definition created with `CLI_PARAMETER.make_help`
+has `Help_action`; ordinary definitions have `Store_action`. All definitions use
+the same parser constructor. When a help action is recognized, `help_requested`
+is True and neither `is_successful` nor `has_error` is True. The caller displays
+help without reading `values`. A help request stops token processing and bypasses
+required-parameter checks.
+
+`values` is available only after a complete successful parse. On failure,
+`error_message` returns the diagnostic. There is no separately
 exposed partial result or required-parameter validation call.
 
 The main loop handles one input token per iteration. Its states are explicit;
@@ -163,6 +200,7 @@ stateDiagram-v2
     Expecting_option_value --> Reading_parameters: one non-option-like value token
     Reading_parameters --> Reading_positionals: separator --
     Reading_positionals --> Reading_positionals: positional value
+    Reading_parameters --> [*]: help action
     Reading_parameters --> [*]: end of input and complete values
     Reading_positionals --> [*]: end of input and complete values
     Expecting_option_value --> Error: option-like token or end of input

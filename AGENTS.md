@@ -5,6 +5,11 @@ Commands define parameters and receive typed values after successful parsing.
 Support both EiffelStudio (EiffelBase) and Gobo (FreeELKS); keep library code
 within their shared ELKS subset.
 
+A CLI program uses one `CLI_APPLICATION`; commands are registered with that
+application. Do not design around sharing commands between applications.
+Command names are declarative metadata and keep the same value after registration.
+Use concise `STRING_32` constants for fixed command names.
+
 ## File map
 
 - `src/`: library classes. `CLI_COMMAND` declares interfaces;

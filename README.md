@@ -51,6 +51,7 @@ inherit
 feature -- Definition
 
     name: STRING_32 = "hello"
+            -- Command name used for selection.
 
     description: STRING_32 = "Greet someone"
 

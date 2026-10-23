@@ -24,25 +24,41 @@ To pass a command name as a positional value to the empty command, use
 collide with command words regardless of their parameter's name.
 
 An application containing only one command with an empty name passes all tokens
-to that command, without a command prefix. `CLI_APPLICATION` does not insert a
-help parameter. It handles a standalone `--help` request before parsing, as
-described below. A registered `CLI_HELP_COMMAND` is an ordinary command and
-accepts multiword names.
+to that command, without a command prefix. `CLI_APPLICATION` initializes the command interface, which adds a help
+parameter when needed, as described below. A registered `CLI_HELP_COMMAND` is
+an ordinary command and accepts multiword names.
 
 ## Automatic help
 
-`tool --help` displays the application overview. `tool pack --help` displays
-help for the selected command, including multiword commands. The entire remainder
-after the command name must be exactly one token, `--help`. Required parameters
-are not checked and the command handler is not called for this request.
+After the user-defined `interface`, `CLI_COMMAND.initialize_interface` adds a
+`--help` flag with a help action unless a parameter named `help` already exists.
+Its short alias is `-h` unless that alias is already assigned. Explicit definitions
+take precedence. The automatic flag is stored in the command's parameter list and appears in
+its generated help. An explicit parameter named `help` added before execution
+replaces it. Assigning `h` to another parameter releases the automatic alias;
+`--help` remains available.
 
-If the selected command declares a parameter named `help`, that definition takes
-precedence and all input follows normal parsing and validation. No automatic `-h`
-alias is reserved. Input such as `tool pack archive.zip --help` follows normal
-parsing; `--password=--help` is a value, and `-- --help` is positional input.
-The parser itself has no special help behavior.
+`tool pack --help` and `tool pack -h` show detailed help for `pack`, including
+multiword commands. An empty default command receives the same detailed help.
+Without a selected command, standalone `tool --help` and `tool -h` show the
+application overview.
 
-Command names must be unique. Nonempty names use single spaces between words,
+Automatic help is recognized wherever a flag is allowed, including short groups
+and after positional values. Once recognized, parsing stops, missing required
+parameters are not checked, and the handler is not called. Earlier token errors
+still fail. `--help=value` is an invalid flag value. A pending option still needs
+its value: `--password --help` reports a missing password. `--password=--help` is
+a literal value, and `-- --help` is positional input.
+
+`CLI_PARSER.make` accepts all definitions through one constructor. Ordinary flags
+store Boolean values; a parameter created with `CLI_PARAMETER.make_help` requests
+help. `help_requested` reports this outcome separately from `is_successful` and
+`has_error`. Only a successful parse exposes complete `values`. The parser does
+not print help or exit; the application renders the selected command's help.
+A directly supplied ordinary flag named `help` has no special behavior.
+
+Command names must be unique and remain stable after registration. Nonempty
+names use single spaces between words,
 with no leading or trailing spaces, tabs, or line breaks. No command word may
 begin with `-`. The application name is separate and must be nonempty.
 

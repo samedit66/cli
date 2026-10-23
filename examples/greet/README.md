@@ -19,6 +19,7 @@ See [building and verification](../../docs/development.md) for compiler setup an
 
 ```sh
 ./build/gobo/greet --help
+./build/gobo/greet -h
 ./build/gobo/greet                       # Hello, world!
 ./build/gobo/greet Alice                 # Hello, Alice!
 ./build/gobo/greet Alice --prefix Hi      # Hi, Alice!
@@ -34,8 +35,8 @@ Use `build/eiffelstudio/greet` for the EiffelStudio build.
 
 `name` defaults to `world`; `--prefix` (`-p`) defaults to `Hello`.
 `--yell` (`-y`) uppercases the complete greeting. An extra positional value is an
-error. This command does not declare a `help` flag.
+error. The application provides `--help` and `-h` for detailed parameter help.
 
 See [GREET_COMMAND](src/greet_command.e) for the declarations and handler, and
-[GREET_APPLICATION](src/greet_application.e) for registration with `CLI_APPLICATION`.
+[GREET_APPLICATION](src/greet_application.e) for creation with `CLI_APPLICATION.make_single_command`.
 The [syntax guide](../../docs/syntax.md) defines the parsing rules.
