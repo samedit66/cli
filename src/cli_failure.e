@@ -8,7 +8,7 @@ class CLI_FAILURE
 
 feature {NONE} -- Termination
 
-    fail (a_message: STRING_32; a_exit_code: INTEGER)
+    fail (a_message: READABLE_STRING_32; a_exit_code: INTEGER)
             -- Print `a_message' to standard error and terminate the process.
             -- Never return; no exception is raised and no rollback is performed.
         require
@@ -16,7 +16,7 @@ feature {NONE} -- Termination
         local
             l_exceptions: EXCEPTIONS
         do
-            io.error.put_string_32 (a_message + "%N")
+            io.error.put_string_32 (a_message.to_string_32 + "%N")
             io.error.flush
             create l_exceptions
             l_exceptions.die (a_exit_code)

@@ -71,8 +71,6 @@ CASES = [
     ("greet", ["--prefix", "Hi", "-p", "Hey"], 2, "", "Repeated parameter: prefix"),
     ("greet", ["-yy"], 2, "", "Repeated parameter: yell"),
     ("greet", ["--prefix"], 2, "", "Missing value for option: --prefix"),
-    ("greet", ["Alice", "--help"], 2, "", "Unknown option: --help"),
-    ("greet", ["-h"], 2, "", "Unknown option: -h"),
     ("greet", ["--pre", "Hi"], 2, "", "Unknown option: --pre"),
     ("greet", ["--prefix=Hi"], 0, "Hi, world!\n", ""),
     ("greet", ["--prefix="], 0, ", world!\n", ""),
@@ -161,7 +159,6 @@ CASES = [
     ("faketar", ["-cvf"], 2, "", "Missing value for option: --file"),
     ("faketar", ["-cvzfarchive.tar"], 2, "", "Option with a value must end the group: -f"),
     ("faketar", ["-b-3"], 2, "", "Option with a value must end the group: -b"),
-    ("faketar", ["src", "--help"], 2, "", "Unknown option: --help"),
     ("cli_tests", [], 0, "parser tests passed\n", ""),
     ("arc", [], 0, "command=<root>\nhelp=False\nversion=False\n", ""),
     ("arc", ["--help"], 0, "command=<root>\nhelp=True\nversion=False\n", ""),
@@ -193,9 +190,7 @@ CASES = [
     ("arc", ["unpack", "project.zip", "./out", "extra"], 2, "", "Unexpected argument: extra"),
     ("arc", ["--help", "pack"], 2, "", "Unexpected argument: pack"),
     ("arc", ["pack", "--version", "project.zip"], 2, "", "Unknown option: --version"),
-    ("arc", ["pack", "project.zip", "--help"], 2, "", "Unknown option: --help"),
-    ("arc", ["pack", "--help", "project.zip"], 2, "", "Unknown option: --help"),
-    ("arc", ["pack", "--help=true"], 2, "", "Unknown option: --help=true"),
+    ("arc", ["pack", "--help=true"], 2, "", "Flag does not accept a value: --help"),
     ("arc", ["pack", "--", "--help"], 0, arc_pack_output("--help"), ""),
     ("arc", ["unknown", "--help"], 2, "", "Unexpected argument: unknown"),
     ("arc", ["pack", "--format=zip", "project.zip"], 0, arc_pack_output("project.zip", format="zip"), ""),
@@ -231,6 +226,9 @@ for tokens, command, kwargs in (
     CASES.append(("cli_tests", ["route", *tokens], 0, routing_output(command, **kwargs), ""))
 
 CASES += [
+    ("cli_tests", ["automatic-immutable", "target", "--count=1"], 0, "handled\n", ""),
+    ("cli_tests", ["automatic-custom", "target", "--count=1", "--help"], 0, "custom help handled\n", ""),
+    ("cli_tests", ["automatic-custom", "--help"], 2, "", "Missing required parameter: target"),
     ("cli_tests", ["route-root-first", "remote", "add", "deep"], 0, routing_output("remote add deep"), ""),
     ("cli_tests", ["route-no-default", "remote", "add"], 0, routing_output("remote add"), ""),
     ("cli_tests", ["route-no-default"], 2, "", "Missing command."),
@@ -252,7 +250,31 @@ CASES += [
     ("cli_tests", ["single-required", "target", "extra", "--count", "1"], 2, "", "Unexpected argument: extra"),
 ]
 
+CASES += [
+    ("cli_tests", ["automatic-conflict", "-h"], 2, "", "Missing required parameter: target"),
+    ("cli_tests", ["automatic-conflict", "target", "--count=1", "-h"], 0, "handled\n", ""),
+    ("cli_tests", ["automatic", "--count", "--help"], 2, "", "Missing value for option: --count"),
+    ("cli_tests", ["automatic", "--", "--help"], 2, "", "Missing required parameter: count"),
+    ("cli_tests", ["automatic", "--unknown", "--help"], 2, "", "Unknown option: --unknown"),
+]
+
 HELP_CASES = [
+    ("cli_tests", ["automatic-immutable", "--help"], "routing - "),
+    ("arc", ["help"], "arc - "),
+    ("cli_tests", ["automatic", "--help", "--unknown"], "routing - "),
+    ("cli_tests", ["automatic", "-hZ"], "routing - "),
+    ("cli_tests", ["automatic", "--help", "--help"], "routing - "),
+    ("cli_tests", ["automatic", "--help"], "routing - "),
+    ("cli_tests", ["automatic", "-h"], "routing - "),
+    ("cli_tests", ["automatic", "-vh"], "routing - "),
+    ("cli_tests", ["automatic-conflict", "--help"], "routing - "),
+    ("greet", ["-h"], "greet - "),
+    ("greet", ["Alice", "--help"], "greet - "),
+    ("greet", ["-yh"], "greet - "),
+    ("faketar", ["src", "--help"], "faketar - "),
+    ("arc", ["pack", "project.zip", "--help"], "arc pack - "),
+    ("arc", ["pack", "-h"], "arc pack - "),
+    ("arc", ["pack", "--help", "project.zip"], "arc pack - "),
     ("greet", ["--help"], "greet - "),
     ("faketar", ["--help"], "faketar - "),
     ("text", ["--help"], "text - "),
@@ -289,6 +311,24 @@ def main():
             )
             assert result.returncode == 0 and not result.stderr, (compiler, result)
             assert result.stdout.startswith(prefix), (compiler, result)
+            assert "Usage:\n" in result.stdout, (compiler, result)
+            if name == "cli_tests" and tokens[0].startswith("automatic"):
+                for fragment in ("<target>", "--count <integer>", "--verbose", "--help"):
+                    assert fragment in result.stdout, (compiler, fragment, result)
+                if tokens[0] == "automatic-conflict":
+                    assert "-h, --verbose" in result.stdout, (compiler, result)
+                    assert "-h, --help" not in result.stdout, (compiler, result)
+            if name == "greet":
+                for fragment in ("greet [name] [options]", "--prefix <string>",
+                                 'default: "Hello"', "--yell", "-h, --help"):
+                    assert fragment in result.stdout, (compiler, fragment, result)
+                assert "Commands:" not in result.stdout, (compiler, result)
+            if name == "arc" and tokens == ["help"]:
+                for fragment in ("Commands:", "pack", "unpack", "list tree", "verify"):
+                    assert fragment in result.stdout, (compiler, fragment, result)
+            if name == "arc" and "pack" in tokens:
+                for fragment in ("<archive>", "--format", "--password", "-h, --help"):
+                    assert fragment in result.stdout, (compiler, fragment, result)
         print(f"{compiler}: {len(CASES) + len(HELP_CASES)} checks passed")
 
 

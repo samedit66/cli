@@ -50,7 +50,11 @@ feature -- Execution
                 end
                 l_name.append (word)
             end
-            application.show_help (l_name)
+            if l_name.is_empty then
+                io.put_string_32 (application.help)
+            else
+                application.show_help (l_name)
+            end
         end
 
 feature {NONE} -- Implementation

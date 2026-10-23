@@ -15,14 +15,14 @@ create
 
 feature {NONE} -- Initialization
 
-    make (a_name: STRING_32)
+    make (a_name: READABLE_STRING_32)
             -- Create a routing fixture with `a_name`.
         do
-            name := a_name.twin
+            name := a_name.to_string_32.twin
             requires_target := name.same_string ("remote required")
         end
 
-    make_required (a_name: STRING_32)
+    make_required (a_name: READABLE_STRING_32)
             -- Use the required-parameter interface regardless of the command name.
         do
             make (a_name)

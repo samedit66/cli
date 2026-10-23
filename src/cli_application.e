@@ -13,26 +13,37 @@ inherit
         end
 
 create
-    make
+    make,
+    make_single_command
 
 feature {NONE} -- Initialization
 
-    make (a_name, a_description: STRING_32)
+    make (a_name, a_description: READABLE_STRING_32)
             -- Create an application with `a_name` and `a_description`.
         require
             non_empty_name: not a_name.is_empty
         do
-            name := a_name.twin
-            description := a_description.twin
+            create name.make_from_string (a_name)
+            create description.make_from_string (a_description)
             create commands.make (Default_capacity)
+        end
+
+    make_single_command (a_name: READABLE_STRING_32; a_command: CLI_COMMAND)
+            -- Create an application using one default command and its description.
+        require
+            non_empty_name: not a_name.is_empty
+            default_command: a_command.name.is_empty
+        do
+            make (a_name, a_command.description)
+            add_command (a_command)
         end
 
 feature -- Definition
 
-    name: STRING_32
-            -- Command name used for selection.
+    name: IMMUTABLE_STRING_32
+            -- Application name used in help and invocation examples.
 
-    description: STRING_32
+    description: IMMUTABLE_STRING_32
             -- Description shown in generated help.
 
     add_command (a_command: CLI_COMMAND)
@@ -41,13 +52,13 @@ feature -- Definition
             valid_name: is_valid_command_name (a_command.name)
             unique_name: not has_command (a_command.name)
         do
-            a_command.interface
+            a_command.initialize_interface
             commands.extend (a_command)
         ensure
             registered: has_command (a_command.name)
         end
 
-    is_valid_command_name (a_name: STRING_32): BOOLEAN
+    is_valid_command_name (a_name: READABLE_STRING_32): BOOLEAN
             -- Is this an empty default name or a canonical sequence of non-option words?
         do
             Result := not a_name.starts_with (" ") and then
@@ -57,7 +68,7 @@ feature -- Definition
                 across a_name.split (' ') as word all not word.starts_with ("-") end
         end
 
-    has_command (a_name: STRING_32): BOOLEAN
+    has_command (a_name: READABLE_STRING_32): BOOLEAN
             -- Is a command with `a_name` registered?
         do
             Result := across commands as c some c.name.same_string (a_name) end
@@ -68,7 +79,7 @@ feature -- Help
     help: STRING_32
             -- Fresh application help, in command registration order.
         do
-            Result := name + " - " + description + "%N%NUsage:%N  " + name
+            Result := name.to_string_32 + " - " + description + "%N%NUsage:%N  " + name
             if has_command ("") then
                 Result.append (" [command]")
             else
@@ -84,7 +95,7 @@ feature -- Help
             end
         end
 
-    command_help (a_name: STRING_32): STRING_32
+    command_help (a_name: READABLE_STRING_32): STRING_32
             -- Fresh help for the registered command named `a_name`.
         require
             known_command: has_command (a_name)
@@ -95,16 +106,16 @@ feature -- Help
                     if c.name.is_empty then
                         Result := c.help (name)
                     else
-                        Result := c.help (name + " " + c.name)
+                        Result := c.help (name.to_string_32 + " " + c.name)
                     end
                 end
             end
         end
 
-    show_help (a_command_name: STRING_32)
-            -- Print general help for an empty name, or help for a command.
+    show_help (a_command_name: READABLE_STRING_32)
+            -- Print command help, or the overview when no default command exists.
         do
-            if a_command_name.is_empty then
+            if a_command_name.is_empty and then not has_command ("") then
                 io.put_string_32 (help)
             elseif has_command (a_command_name) then
                 io.put_string_32 (command_help (a_command_name))
@@ -120,7 +131,7 @@ feature -- Execution
             -- Invalid calls terminate the process with {CLI_COMMAND}.Invalid_call.
         local
             l_arguments: ARGUMENTS_32
-            l_tokens: ARRAYED_LIST [STRING_32]
+            l_tokens: ARRAYED_LIST [READABLE_STRING_32]
             i: INTEGER
         do
             create l_arguments
@@ -133,12 +144,12 @@ feature -- Execution
             run_with_tokens (l_tokens)
         end
 
-    run_with_tokens (a_tokens: READABLE_INDEXABLE [STRING_32])
+    run_with_tokens (a_tokens: READABLE_INDEXABLE [READABLE_STRING_32])
             -- Select and execute a command. Tokens exclude the executable name.
             -- Invalid calls terminate the process with {CLI_COMMAND}.Invalid_call.
         local
             l_match: detachable TUPLE [command: CLI_COMMAND; consumed_count: INTEGER]
-            l_tokens: ARRAYED_LIST [STRING_32]
+            l_tokens: ARRAYED_LIST [READABLE_STRING_32]
             l_parser: CLI_PARSER
             i: INTEGER
         do
@@ -149,21 +160,16 @@ feature -- Execution
                     l_tokens.extend (a_tokens [i])
                     i := i + 1
                 end
-                if l_tokens.count = 1 and then l_tokens.first.same_string ("--help") and then
-                    across match.command.parameters as p all not p.name.same_string ("help") end
-                then
-                    -- A standalone help request bypasses parsing unless explicitly overridden.
-                    show_help (match.command.name)
+                create l_parser.make (match.command.parameters)
+                l_parser.parse (l_tokens)
+                if l_parser.help_requested then
+                    io.put_string_32 (command_help (match.command.name))
+                elseif l_parser.is_successful then
+                    match.command.handle (l_parser.values)
                 else
-                    create l_parser.make (match.command.parameters)
-                    l_parser.parse (l_tokens)
-                    if l_parser.is_successful then
-                        match.command.handle (l_parser.values)
-                    else
-                        report_error (l_parser.error_message)
-                    end
+                    report_error (l_parser.error_message)
                 end
-            elseif a_tokens.upper = a_tokens.lower and then a_tokens [a_tokens.lower].same_string ("--help") then
+            elseif a_tokens.upper = a_tokens.lower and then (a_tokens [a_tokens.lower].same_string ("--help") or else a_tokens [a_tokens.lower].same_string ("-h")) then
                 show_help ("")
             elseif a_tokens.lower > a_tokens.upper then
                 report_error ("Missing command.")
@@ -174,10 +180,10 @@ feature -- Execution
 
 feature {NONE} -- Implementation
 
-    selected_command (a_tokens: READABLE_INDEXABLE [STRING_32]): detachable TUPLE [command: CLI_COMMAND; consumed_count: INTEGER]
+    selected_command (a_tokens: READABLE_INDEXABLE [READABLE_STRING_32]): detachable TUPLE [command: CLI_COMMAND; consumed_count: INTEGER]
             -- Command with the longest complete word prefix, including an empty default.
         local
-            l_words: LIST [STRING_32]
+            l_words: LIST [READABLE_STRING_32]
             l_count, i: INTEGER
             l_matches: BOOLEAN
         do
@@ -201,12 +207,12 @@ feature {NONE} -- Implementation
 
     commands: ARRAYED_LIST [CLI_COMMAND]
 
-    report_unknown_command (a_name: STRING_32)
+    report_unknown_command (a_name: READABLE_STRING_32)
         do
             report_error ({STRING_32} "Unknown command: " + a_name)
         end
 
-    report_error (a_message: STRING_32)
+    report_error (a_message: READABLE_STRING_32)
         do
             fail (a_message, {CLI_COMMAND}.Invalid_call)
         ensure

@@ -6,6 +6,12 @@ note
 class
     CLI_PARSER
 
+inherit
+    CLI_STRING_ROUTINES
+        export
+            {NONE} all
+        end
+
 create
     make
 
@@ -14,6 +20,8 @@ feature {NONE} -- Initialization
     make (a_parameters: ITERABLE [CLI_PARAMETER])
             -- Retain definitions for one parse.
             -- Definitions must remain unchanged until parsing finishes.
+        require
+            valid_definitions: are_valid_definitions (a_parameters)
         do
             create parameters.make (Default_capacity)
             create positional_parameters.make (Default_capacity)
@@ -25,18 +33,45 @@ feature {NONE} -- Initialization
             end
             create parsed_values.make
             create last_error.make_empty
+            outcome := Not_parsed
+        end
+
+feature -- Definition validation
+
+    are_valid_definitions (a_parameters: ITERABLE [CLI_PARAMETER]): BOOLEAN
+            -- Are names, aliases, and positional ordering consistent?
+        local
+            l_seen: ARRAYED_LIST [CLI_PARAMETER]
+            l_list_seen, l_optional_seen: BOOLEAN
+        do
+            create l_seen.make (4)
+            Result := True
+            across a_parameters as p loop
+                Result := Result and then is_valid_parameter_name (p.name) and then
+                    across l_seen as previous all
+                        not previous.name.same_string (p.name) and then
+                        (not p.has_short_name or else not previous.has_short_name or else
+                            previous.short_name /= p.short_name) end
+                if p.kind = p.Argument_kind then
+                    Result := Result and then not l_list_seen and then
+                        (p.is_optional or else not l_optional_seen)
+                    l_list_seen := l_list_seen or p.is_multiple
+                    l_optional_seen := l_optional_seen or p.is_optional
+                end
+                l_seen.extend (p)
+            end
         end
 
 feature -- Parsing
 
-    parse (a_tokens: READABLE_INDEXABLE [STRING_32])
+    parse (a_tokens: READABLE_INDEXABLE [READABLE_STRING_32])
             -- Consume tokens, check completeness, and supply absent defaults.
             -- Read tokens without retaining or changing the input.
         require
             not_parsed: not is_parsed
         local
             i, j, l_position, l_state, l_equals_position: INTEGER
-            l_token, l_option_token, l_short_token: STRING_32
+            l_token, l_option_token, l_short_token: READABLE_STRING_32
             l_pending_option: detachable CLI_PARAMETER
         do
             from
@@ -44,7 +79,7 @@ feature -- Parsing
                 l_position := 1
                 l_state := Reading_parameters
             until
-                i > a_tokens.upper or has_error
+                i > a_tokens.upper or has_error or help_requested
             loop
                 l_token := a_tokens [i]
                 inspect l_state
@@ -95,7 +130,7 @@ feature -- Parsing
                     elseif l_state = Reading_parameters and then
                         l_token.count > 1 and then l_token [1] = '-'
                     then
-                        from j := 2 until j > l_token.count or has_error loop
+                        from j := 2 until j > l_token.count or has_error or help_requested loop
                             l_short_token := {STRING_32} "-" + l_token.substring (j, j)
                             if attached lookup_option (l_short_token) as p then
                                 if p.kind = p.Flag_kind then
@@ -139,34 +174,45 @@ feature -- Parsing
                 end
             end
 
-            if not has_error then
+            if not has_error and then not help_requested then
                 if attached l_pending_option as p then
                     fail ({STRING_32} "Missing value for option: --" + p.name)
                 else
                     complete_values
                 end
             end
-            is_parsed := True
+            if not has_error and then not help_requested then
+                outcome := Success
+            end
         ensure
             parsed: is_parsed
-            outcome: is_successful xor has_error
+            outcome: is_successful or has_error or help_requested
         end
 
 feature -- Status report
 
+    help_requested: BOOLEAN
+            -- Was a help action recognized?
+        do
+            Result := outcome = Help_request
+        end
+
     is_parsed: BOOLEAN
             -- Has parsing finished?
+        do
+            Result := outcome /= Not_parsed
+        end
 
     is_successful: BOOLEAN
-            -- Has parsing finished without an error?
+            -- Are complete parameter values available?
         do
-            Result := is_parsed and then not has_error
+            Result := outcome = Success
         end
 
     has_error: BOOLEAN
             -- Has parsing failed?
         do
-            Result := not last_error.is_empty
+            Result := outcome = Failure
         end
 
 feature -- Result
@@ -197,11 +243,18 @@ feature {NONE} -- Input and result
     parsed_values: CLI_COMMAND_INPUT
             -- Contains only explicit values until completion supplies defaults.
 
+    outcome: INTEGER
+
+    Not_parsed: INTEGER = unique
+    Success: INTEGER = unique
+    Failure: INTEGER = unique
+    Help_request: INTEGER = unique
+
     last_error: STRING_32
 
 feature {NONE} -- Implementation
 
-    lookup_option (a_spelling: STRING_32): detachable CLI_PARAMETER
+    lookup_option (a_spelling: READABLE_STRING_32): detachable CLI_PARAMETER
             -- Definition matching an exact long name or one-letter alias.
         do
             across parameters as p loop
@@ -219,12 +272,14 @@ feature {NONE} -- Implementation
             end
         end
 
-    store_value (a_parameter: CLI_PARAMETER; a_token: detachable STRING_32)
+    store_value (a_parameter: CLI_PARAMETER; a_token: detachable READABLE_STRING_32)
             -- Store one explicit occurrence; flags have no value token.
         require
             value_for_non_flag: (a_parameter.kind = a_parameter.Flag_kind) = (a_token = Void)
         do
-            if parsed_values.has_parameter (a_parameter.name) and then not a_parameter.is_multiple then
+            if a_parameter.action = a_parameter.Help_action then
+                outcome := Help_request
+            elseif parsed_values.has_parameter (a_parameter.name) and then not a_parameter.is_multiple then
                 fail ({STRING_32} "Repeated parameter: " + a_parameter.name)
             elseif a_parameter.kind = a_parameter.Flag_kind then
                 parsed_values.put_boolean (a_parameter.name, True)
@@ -245,7 +300,7 @@ feature {NONE} -- Implementation
                     if parsed_values.has_parameter (a_parameter.name) then
                         parsed_values.append_string (a_parameter.name, l_token)
                     else
-                        parsed_values.put_string_list (a_parameter.name, {ARRAY [STRING_32]} <<l_token>>)
+                        parsed_values.put_string_list (a_parameter.name, {ARRAY [READABLE_STRING_32]} <<l_token>>)
                     end
                 else
                     parsed_values.put_string (a_parameter.name, l_token)
@@ -277,9 +332,10 @@ feature {NONE} -- Implementation
             end
         end
 
-    fail (a_message: STRING_32)
+    fail (a_message: READABLE_STRING_32)
         do
-            last_error := a_message.twin
+            last_error := a_message.to_string_32.twin
+            outcome := Failure
         end
 
 feature {NONE} -- States
@@ -291,5 +347,8 @@ feature {NONE} -- States
 feature {NONE} -- Capacity
 
     Default_capacity: INTEGER = 4
+
+invariant
+    valid_outcome: outcome = Not_parsed or outcome = Success or outcome = Failure or outcome = Help_request
 
 end

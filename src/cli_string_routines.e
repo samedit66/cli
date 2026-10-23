@@ -1,10 +1,19 @@
 note
-    description: "Explicit splitting of parsed string values."
+    description: "Parameter-name validation and explicit splitting of string values."
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
 class
     CLI_STRING_ROUTINES
+
+feature -- Validation
+
+    is_valid_parameter_name (a_name: READABLE_STRING_32): BOOLEAN
+            -- Is this a nonempty name without spaces, equals signs, or a leading dash?
+        do
+            Result := not a_name.is_empty and then not a_name.has (' ') and then
+                not a_name.has ('=') and then not a_name.starts_with ("-")
+        end
 
 feature -- Splitting
 

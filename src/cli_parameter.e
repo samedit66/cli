@@ -6,6 +6,12 @@ note
 class
     CLI_PARAMETER
 
+inherit
+    CLI_STRING_ROUTINES
+        export
+            {NONE} all
+        end
+
 create
     make_integer_argument,
     make_optional_integer_argument,
@@ -16,6 +22,7 @@ create
     make_string_option,
     make_optional_string_option,
     make_flag,
+    make_help,
     make_integer_list_argument,
     make_optional_integer_list_argument,
     make_integer_list_option,
@@ -27,128 +34,144 @@ create
 
 feature {NONE} -- Initialization
 
-    make_integer_argument (a_name, a_description: STRING_32)
+    make_integer_argument (a_name, a_description: READABLE_STRING_32)
             -- Create a required integer argument parameter.
         require
             valid_name: is_valid_name (a_name)
         do
-            name := a_name.twin
-            description := a_description.twin
+            create name.make_from_string (a_name)
+            create description.make_from_string (a_description)
             create string_default.make_empty
+            action := Store_action
             kind := Argument_kind
             value_type := Integer_type
             is_optional := False
         end
 
-    make_optional_integer_argument (a_name, a_description: STRING_32; a_default: INTEGER)
+    make_optional_integer_argument (a_name, a_description: READABLE_STRING_32; a_default: INTEGER)
             -- Create an optional integer argument parameter with an explicit default.
         require
             valid_name: is_valid_name (a_name)
         do
-            name := a_name.twin
-            description := a_description.twin
+            create name.make_from_string (a_name)
+            create description.make_from_string (a_description)
             create string_default.make_empty
+            action := Store_action
             kind := Argument_kind
             value_type := Integer_type
             is_optional := True
             integer_default := a_default
         end
 
-    make_integer_option (a_name, a_description: STRING_32)
+    make_integer_option (a_name, a_description: READABLE_STRING_32)
             -- Create a required integer option parameter.
         require
             valid_name: is_valid_name (a_name)
         do
-            name := a_name.twin
-            description := a_description.twin
+            create name.make_from_string (a_name)
+            create description.make_from_string (a_description)
             create string_default.make_empty
+            action := Store_action
             kind := Option_kind
             value_type := Integer_type
             is_optional := False
         end
 
-    make_optional_integer_option (a_name, a_description: STRING_32; a_default: INTEGER)
+    make_optional_integer_option (a_name, a_description: READABLE_STRING_32; a_default: INTEGER)
             -- Create an optional integer option parameter with an explicit default.
         require
             valid_name: is_valid_name (a_name)
         do
-            name := a_name.twin
-            description := a_description.twin
+            create name.make_from_string (a_name)
+            create description.make_from_string (a_description)
             create string_default.make_empty
+            action := Store_action
             kind := Option_kind
             value_type := Integer_type
             is_optional := True
             integer_default := a_default
         end
 
-    make_string_argument (a_name, a_description: STRING_32)
+    make_string_argument (a_name, a_description: READABLE_STRING_32)
             -- Create a required string argument parameter.
         require
             valid_name: is_valid_name (a_name)
         do
-            name := a_name.twin
-            description := a_description.twin
+            create name.make_from_string (a_name)
+            create description.make_from_string (a_description)
             create string_default.make_empty
+            action := Store_action
             kind := Argument_kind
             value_type := String_type
             is_optional := False
         end
 
-    make_optional_string_argument (a_name, a_description: STRING_32; a_default: STRING_32)
+    make_optional_string_argument (a_name, a_description: READABLE_STRING_32; a_default: READABLE_STRING_32)
             -- Create an optional string argument parameter with an explicit default.
         require
             valid_name: is_valid_name (a_name)
         do
-            name := a_name.twin
-            description := a_description.twin
+            create name.make_from_string (a_name)
+            create description.make_from_string (a_description)
             create string_default.make_empty
+            action := Store_action
             kind := Argument_kind
             value_type := String_type
             is_optional := True
-            string_default := a_default.twin
+            create string_default.make_from_string (a_default)
         end
 
-    make_string_option (a_name, a_description: STRING_32)
+    make_string_option (a_name, a_description: READABLE_STRING_32)
             -- Create a required string option parameter.
         require
             valid_name: is_valid_name (a_name)
         do
-            name := a_name.twin
-            description := a_description.twin
+            create name.make_from_string (a_name)
+            create description.make_from_string (a_description)
             create string_default.make_empty
+            action := Store_action
             kind := Option_kind
             value_type := String_type
             is_optional := False
         end
 
-    make_optional_string_option (a_name, a_description: STRING_32; a_default: STRING_32)
+    make_optional_string_option (a_name, a_description: READABLE_STRING_32; a_default: READABLE_STRING_32)
             -- Create an optional string option parameter with an explicit default.
         require
             valid_name: is_valid_name (a_name)
         do
-            name := a_name.twin
-            description := a_description.twin
+            create name.make_from_string (a_name)
+            create description.make_from_string (a_description)
             create string_default.make_empty
+            action := Store_action
             kind := Option_kind
             value_type := String_type
             is_optional := True
-            string_default := a_default.twin
+            create string_default.make_from_string (a_default)
         end
 
-    make_flag (a_name, a_description: STRING_32)
+    make_flag (a_name, a_description: READABLE_STRING_32)
             -- Create a flag that defaults to False.
         require
             valid_name: is_valid_name (a_name)
         do
-            name := a_name.twin
-            description := a_description.twin
+            create name.make_from_string (a_name)
+            create description.make_from_string (a_description)
             create string_default.make_empty
+            action := Store_action
             kind := Flag_kind
             value_type := Boolean_type
             is_optional := True
         end
 
-    make_integer_list_argument (a_name, a_description: STRING_32)
+    make_help
+            -- Create an optional help action named help.
+        do
+            make_flag ("help", "Show command help")
+            action := Help_action
+        end
+
+    make_integer_list_argument (a_name, a_description: READABLE_STRING_32)
             -- Create a required integer list argument parameter.
         require
             valid_name: is_valid_name (a_name)
@@ -157,7 +180,7 @@ feature {NONE} -- Initialization
             is_multiple := True
         end
 
-    make_optional_integer_list_argument (a_name, a_description: STRING_32; a_default: ITERABLE [INTEGER])
+    make_optional_integer_list_argument (a_name, a_description: READABLE_STRING_32; a_default: ITERABLE [INTEGER])
             -- Create an optional integer list argument parameter with an explicit default.
         require
             valid_name: is_valid_name (a_name)
@@ -165,11 +188,11 @@ feature {NONE} -- Initialization
             make_optional_integer_argument (a_name, a_description, 0)
             is_multiple := True
             across a_default as value loop
-                integer_list_default.extend (value)
+                integer_list_storage.extend (value)
             end
         end
 
-    make_integer_list_option (a_name, a_description: STRING_32)
+    make_integer_list_option (a_name, a_description: READABLE_STRING_32)
             -- Create a required integer list option parameter.
         require
             valid_name: is_valid_name (a_name)
@@ -178,7 +201,7 @@ feature {NONE} -- Initialization
             is_multiple := True
         end
 
-    make_optional_integer_list_option (a_name, a_description: STRING_32; a_default: ITERABLE [INTEGER])
+    make_optional_integer_list_option (a_name, a_description: READABLE_STRING_32; a_default: ITERABLE [INTEGER])
             -- Create an optional integer list option parameter with an explicit default.
         require
             valid_name: is_valid_name (a_name)
@@ -186,11 +209,11 @@ feature {NONE} -- Initialization
             make_optional_integer_option (a_name, a_description, 0)
             is_multiple := True
             across a_default as value loop
-                integer_list_default.extend (value)
+                integer_list_storage.extend (value)
             end
         end
 
-    make_string_list_argument (a_name, a_description: STRING_32)
+    make_string_list_argument (a_name, a_description: READABLE_STRING_32)
             -- Create a required string list argument parameter.
         require
             valid_name: is_valid_name (a_name)
@@ -199,7 +222,7 @@ feature {NONE} -- Initialization
             is_multiple := True
         end
 
-    make_optional_string_list_argument (a_name, a_description: STRING_32; a_default: ITERABLE [STRING_32])
+    make_optional_string_list_argument (a_name, a_description: READABLE_STRING_32; a_default: ITERABLE [READABLE_STRING_32])
             -- Create an optional string list argument parameter with an explicit default.
         require
             valid_name: is_valid_name (a_name)
@@ -207,11 +230,11 @@ feature {NONE} -- Initialization
             make_optional_string_argument (a_name, a_description, "")
             is_multiple := True
             across a_default as value loop
-                string_list_default.extend (value.twin)
+                string_list_storage.extend (value.to_string_32.twin)
             end
         end
 
-    make_string_list_option (a_name, a_description: STRING_32)
+    make_string_list_option (a_name, a_description: READABLE_STRING_32)
             -- Create a required string list option parameter.
         require
             valid_name: is_valid_name (a_name)
@@ -220,7 +243,7 @@ feature {NONE} -- Initialization
             is_multiple := True
         end
 
-    make_optional_string_list_option (a_name, a_description: STRING_32; a_default: ITERABLE [STRING_32])
+    make_optional_string_list_option (a_name, a_description: READABLE_STRING_32; a_default: ITERABLE [READABLE_STRING_32])
             -- Create an optional string list option parameter with an explicit default.
         require
             valid_name: is_valid_name (a_name)
@@ -228,24 +251,35 @@ feature {NONE} -- Initialization
             make_optional_string_option (a_name, a_description, "")
             is_multiple := True
             across a_default as value loop
-                string_list_default.extend (value.twin)
+                string_list_storage.extend (value.to_string_32.twin)
             end
         end
 
 feature -- Validation
 
-    is_valid_name (a_name: STRING_32): BOOLEAN
+    is_valid_name (a_name: READABLE_STRING_32): BOOLEAN
             -- Is `a_name` a nonempty parameter name without separators or a leading dash?
         do
-            Result := not a_name.is_empty and then not a_name.has (' ') and then not a_name.has ('=') and then not a_name.starts_with ("-")
+            Result := is_valid_parameter_name (a_name)
         end
+
+feature -- Actions
+
+    Store_action: INTEGER = unique
+            -- Store the parsed value.
+
+    Help_action: INTEGER = unique
+            -- Request help without completing required-parameter validation.
+
+    action: INTEGER
+            -- Action performed when this parameter is recognized.
 
 feature -- Access
 
-    name: STRING_32
+    name: IMMUTABLE_STRING_32
             -- Parameter name without option prefixes.
 
-    description: STRING_32
+    description: IMMUTABLE_STRING_32
             -- Description shown in generated help.
 
     kind: INTEGER
@@ -269,17 +303,32 @@ feature -- Access
     integer_default: INTEGER
             -- Default for an optional integer parameter.
 
-    string_default: STRING_32
+    string_default: IMMUTABLE_STRING_32
             -- Default for an optional string parameter.
 
     integer_list_default: ARRAYED_LIST [INTEGER]
-            -- Owned default values for an optional integer list parameter.
+            -- Copy of the default integer values.
+        do
+            Result := integer_list_storage.twin
+        end
+
+    string_list_default: ARRAYED_LIST [STRING_32]
+            -- Copy of the default string values, including their strings.
+        do
+            create Result.make (string_list_storage.count)
+            across string_list_storage as value loop
+                Result.extend (value.twin)
+            end
+        end
+
+feature {NONE} -- Defaults
+
+    integer_list_storage: ARRAYED_LIST [INTEGER]
         attribute
             create Result.make (Default_capacity)
         end
 
-    string_list_default: ARRAYED_LIST [STRING_32]
-            -- Owned default values for an optional string list parameter.
+    string_list_storage: ARRAYED_LIST [STRING_32]
         attribute
             create Result.make (Default_capacity)
         end
@@ -289,6 +338,16 @@ feature {NONE} -- Capacity
     Default_capacity: INTEGER = 4
 
 feature {CLI_COMMAND} -- Short name assignment
+
+    remove_short_name
+            -- Release an automatically assigned alias.
+        require
+            help_action: action = Help_action
+        do
+            has_short_name := False
+        ensure
+            removed: not has_short_name
+        end
 
     set_short_name (a_short_name: CHARACTER_32)
             -- Assign a short name during command definition.
@@ -323,6 +382,8 @@ feature -- Value types
             -- Boolean parameter value type.
 
 invariant
+    valid_action: action = Store_action or action = Help_action
+    help_is_flag: action = Help_action implies kind = Flag_kind
     no_flag_lists: is_multiple implies kind /= Flag_kind
     non_empty_name: not name.is_empty
     valid_kind: kind = Argument_kind or kind = Option_kind or kind = Flag_kind

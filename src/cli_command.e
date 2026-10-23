@@ -7,6 +7,11 @@ deferred class
     CLI_COMMAND
 
 inherit
+    CLI_STRING_ROUTINES
+        export
+            {NONE} split
+        end
+
     CLI_FAILURE
         export
             {ANY} fail
@@ -14,12 +19,12 @@ inherit
 
 feature -- Definition
 
-    name: STRING_32
-            -- Command name.
+    name: READABLE_STRING_32
+            -- Command name; its value remains stable after registration.
         deferred
         end
 
-    description: STRING_32
+    description: READABLE_STRING_32
             -- Command description.
         deferred
         end
@@ -31,12 +36,43 @@ feature {CLI_APPLICATION} -- Interface definition
         deferred
         end
 
+feature {CLI_APPLICATION} -- Initialization
+
+    initialize_interface
+            -- Declare parameters once and supply automatic help when needed.
+        local
+            l_help: CLI_PARAMETER
+        do
+            if not is_interface_initialized then
+                interface
+                if not has_parameter ("help") then
+                    create l_help.make_help
+                    automatic_help := l_help
+                    register_parameter (l_help)
+                    if can_set_short_name ("help", 'h') then
+                        set_short_name ("help", 'h')
+                    end
+                end
+                is_interface_initialized := True
+            end
+        end
+
+feature -- Status report
+
+    is_interface_initialized: BOOLEAN
+            -- Has the application declared this command's interface?
+
 feature -- Integer parameters
 
     add_integer_argument (
-        a_name, a_description: STRING_32
+        a_name, a_description: READABLE_STRING_32
     )
             -- Add a required positional integer argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
+            required_argument_before_optional: not has_optional_argument
         local
             l_parameter: CLI_PARAMETER
         do
@@ -45,10 +81,14 @@ feature -- Integer parameters
         end
 
     add_optional_integer_argument (
-        a_name, a_description: STRING_32;
+        a_name, a_description: READABLE_STRING_32;
         a_default: INTEGER
     )
             -- Add an optional positional integer argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
         local
             l_parameter: CLI_PARAMETER
         do
@@ -57,9 +97,12 @@ feature -- Integer parameters
         end
 
     add_integer_option (
-        a_name, a_description: STRING_32
+        a_name, a_description: READABLE_STRING_32
     )
             -- Add a required integer option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
         local
             l_parameter: CLI_PARAMETER
         do
@@ -68,10 +111,13 @@ feature -- Integer parameters
         end
 
     add_optional_integer_option (
-        a_name, a_description: STRING_32;
+        a_name, a_description: READABLE_STRING_32;
         a_default: INTEGER
     )
             -- Add an optional integer option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
         local
             l_parameter: CLI_PARAMETER
         do
@@ -82,9 +128,14 @@ feature -- Integer parameters
 feature -- String parameters
 
     add_string_argument (
-        a_name, a_description: STRING_32
+        a_name, a_description: READABLE_STRING_32
     )
             -- Add a required positional string argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
+            required_argument_before_optional: not has_optional_argument
         local
             l_parameter: CLI_PARAMETER
         do
@@ -93,10 +144,14 @@ feature -- String parameters
         end
 
     add_optional_string_argument (
-        a_name, a_description: STRING_32;
-        a_default: STRING_32
+        a_name, a_description: READABLE_STRING_32;
+        a_default: READABLE_STRING_32
     )
             -- Add an optional positional string argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
         local
             l_parameter: CLI_PARAMETER
         do
@@ -105,9 +160,12 @@ feature -- String parameters
         end
 
     add_string_option (
-        a_name, a_description: STRING_32
+        a_name, a_description: READABLE_STRING_32
     )
             -- Add a required string option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
         local
             l_parameter: CLI_PARAMETER
         do
@@ -116,10 +174,13 @@ feature -- String parameters
         end
 
     add_optional_string_option (
-        a_name, a_description: STRING_32;
-        a_default: STRING_32
+        a_name, a_description: READABLE_STRING_32;
+        a_default: READABLE_STRING_32
     )
             -- Add an optional string option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
         local
             l_parameter: CLI_PARAMETER
         do
@@ -129,8 +190,13 @@ feature -- String parameters
 
 feature -- List parameters
 
-    add_integer_list_argument (a_name, a_description: STRING_32)
+    add_integer_list_argument (a_name, a_description: READABLE_STRING_32)
             -- Add a required integer list argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
+            required_argument_before_optional: not has_optional_argument
         local
             l_parameter: CLI_PARAMETER
         do
@@ -138,8 +204,12 @@ feature -- List parameters
             register_parameter (l_parameter)
         end
 
-    add_optional_integer_list_argument (a_name, a_description: STRING_32; a_default: ITERABLE [INTEGER])
+    add_optional_integer_list_argument (a_name, a_description: READABLE_STRING_32; a_default: ITERABLE [INTEGER])
             -- Add a defaulted integer list argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
         local
             l_parameter: CLI_PARAMETER
         do
@@ -147,8 +217,11 @@ feature -- List parameters
             register_parameter (l_parameter)
         end
 
-    add_integer_list_option (a_name, a_description: STRING_32)
+    add_integer_list_option (a_name, a_description: READABLE_STRING_32)
             -- Add a required integer list option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
         local
             l_parameter: CLI_PARAMETER
         do
@@ -156,8 +229,11 @@ feature -- List parameters
             register_parameter (l_parameter)
         end
 
-    add_optional_integer_list_option (a_name, a_description: STRING_32; a_default: ITERABLE [INTEGER])
+    add_optional_integer_list_option (a_name, a_description: READABLE_STRING_32; a_default: ITERABLE [INTEGER])
             -- Add a defaulted integer list option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
         local
             l_parameter: CLI_PARAMETER
         do
@@ -165,8 +241,13 @@ feature -- List parameters
             register_parameter (l_parameter)
         end
 
-    add_string_list_argument (a_name, a_description: STRING_32)
+    add_string_list_argument (a_name, a_description: READABLE_STRING_32)
             -- Add a required string list argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
+            required_argument_before_optional: not has_optional_argument
         local
             l_parameter: CLI_PARAMETER
         do
@@ -174,8 +255,12 @@ feature -- List parameters
             register_parameter (l_parameter)
         end
 
-    add_optional_string_list_argument (a_name, a_description: STRING_32; a_default: ITERABLE [STRING_32])
+    add_optional_string_list_argument (a_name, a_description: READABLE_STRING_32; a_default: ITERABLE [READABLE_STRING_32])
             -- Add a defaulted string list argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
         local
             l_parameter: CLI_PARAMETER
         do
@@ -183,8 +268,11 @@ feature -- List parameters
             register_parameter (l_parameter)
         end
 
-    add_string_list_option (a_name, a_description: STRING_32)
+    add_string_list_option (a_name, a_description: READABLE_STRING_32)
             -- Add a required string list option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
         local
             l_parameter: CLI_PARAMETER
         do
@@ -192,8 +280,11 @@ feature -- List parameters
             register_parameter (l_parameter)
         end
 
-    add_optional_string_list_option (a_name, a_description: STRING_32; a_default: ITERABLE [STRING_32])
+    add_optional_string_list_option (a_name, a_description: READABLE_STRING_32; a_default: ITERABLE [READABLE_STRING_32])
             -- Add a defaulted string list option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
         local
             l_parameter: CLI_PARAMETER
         do
@@ -204,9 +295,12 @@ feature -- List parameters
 feature -- Flags
 
     add_flag (
-        a_name, a_description: STRING_32
+        a_name, a_description: READABLE_STRING_32
     )
             -- Add a flag: False when absent, True when present.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
         local
             l_parameter: CLI_PARAMETER
         do
@@ -217,14 +311,20 @@ feature -- Flags
 feature -- Short names
 
     set_short_name (
-        a_name: STRING_32;
+        a_name: READABLE_STRING_32;
         a_short_name: CHARACTER_32
     )
             -- Assign a short name to an option or flag.
             -- Short names are letters and can be assigned only once.
+            -- A user assignment may claim the alias of automatic help.
         require
             assignable: can_set_short_name (a_name, a_short_name)
         do
+            if attached automatic_help as l_help and then not a_name.same_string (l_help.name) and then
+                l_help.has_short_name and then l_help.short_name = a_short_name
+            then
+                l_help.remove_short_name
+            end
             across parameters as p loop
                 if p.name.same_string (a_name) then
                     p.set_short_name (a_short_name)
@@ -238,7 +338,14 @@ feature -- Short names
 
 feature -- Parameter availability
 
-    has_parameter (a_name: STRING_32): BOOLEAN
+    is_available_parameter_name (a_name: READABLE_STRING_32): BOOLEAN
+            -- Is this name free or occupied only by automatic help?
+        do
+            Result := not has_parameter (a_name) or else
+                (a_name.same_string ("help") and then automatic_help /= Void)
+        end
+
+    has_parameter (a_name: READABLE_STRING_32): BOOLEAN
             -- Is a parameter with this name already declared?
         do
             Result := across parameters as p some p.name.same_string (a_name) end
@@ -258,7 +365,7 @@ feature -- Parameter availability
 
 feature -- Short name availability
 
-    can_set_short_name (a_name: STRING_32; a_short_name: CHARACTER_32): BOOLEAN
+    can_set_short_name (a_name: READABLE_STRING_32; a_short_name: CHARACTER_32): BOOLEAN
             -- Can an unassigned option or flag receive this unique letter?
         do
             Result := a_short_name.is_alpha and then
@@ -266,17 +373,17 @@ feature -- Short name availability
                     p.name.same_string (a_name) and then
                     p.kind /= p.Argument_kind and then not p.has_short_name end) and then
                 (across parameters as p all
-                    not p.has_short_name or else p.short_name /= a_short_name end)
+                    p = automatic_help or else not p.has_short_name or else p.short_name /= a_short_name end)
         end
 
 feature -- Help
 
-    help (a_invocation: STRING_32): STRING_32
+    help (a_invocation: READABLE_STRING_32): STRING_32
             -- Fresh help using the complete invocation, including any subcommand name.
         local
             l_has_options: BOOLEAN
         do
-            Result := a_invocation + " - " + description +
+            Result := a_invocation.to_string_32 + " - " + description +
                 "%N%NUsage:%N  " + a_invocation
             across parameters as p loop
                 if p.kind = p.Argument_kind then
@@ -328,7 +435,7 @@ feature {NONE} -- Parameter definitions
 
     argument_usage_name (a_parameter: CLI_PARAMETER): STRING_32
         do
-            Result := a_parameter.name.twin
+            Result := a_parameter.name.to_string_32.twin
             if a_parameter.is_multiple then
                 Result.append ("...")
             end
@@ -364,7 +471,7 @@ feature {NONE} -- Parameter definitions
             end
         end
 
-    append_help_section (a_text, a_title: STRING_32; a_section: INTEGER)
+    append_help_section (a_text: STRING_32; a_title: READABLE_STRING_32; a_section: INTEGER)
             -- Append a nonempty section to the fresh help buffer.
         local
             l_started, l_matches: BOOLEAN
@@ -416,17 +523,28 @@ feature {NONE} -- Parameter definitions
     register_parameter (a_parameter: CLI_PARAMETER)
             -- Register a definition with a unique name and valid position.
         require
-            unique_name: not has_parameter (a_parameter.name)
+            unique_name: is_available_parameter_name (a_parameter.name)
             positional_list_last: a_parameter.kind = a_parameter.Argument_kind implies
                 not has_positional_list
             required_argument_before_optional: a_parameter.kind = a_parameter.Argument_kind and then not a_parameter.is_optional implies
                 not has_optional_argument
         do
+            if a_parameter.name.same_string ("help") and then attached automatic_help as l_help and then
+                a_parameter /= l_help
+            then
+                parameters.prune_all (l_help)
+                automatic_help := Void
+            end
             parameters.extend (a_parameter)
         ensure
-            added: parameters.count = old parameters.count + 1
+            added: has_parameter (a_parameter.name)
             last_definition: parameters.last = a_parameter
         end
+
+feature {NONE} -- Automatic help
+
+    automatic_help: detachable CLI_PARAMETER
+            -- Automatically added definition, replaceable by an explicit one.
 
 feature {NONE} -- Capacity
 

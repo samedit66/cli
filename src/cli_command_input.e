@@ -23,7 +23,7 @@ feature {NONE} -- Initialization
 
 feature -- Status report
 
-    has_parameter (a_name: STRING_32): BOOLEAN
+    has_parameter (a_name: READABLE_STRING_32): BOOLEAN
             -- Is a value stored for this parameter, including an empty string or list?
         do
             Result := integer_values.has (a_name) or else string_values.has (a_name) or else
@@ -31,31 +31,31 @@ feature -- Status report
                 string_list_values.has (a_name)
         end
 
-    has_integer_parameter (a_name: STRING_32): BOOLEAN
-            -- Is a integer value stored for `a_name`?
+    has_integer_parameter (a_name: READABLE_STRING_32): BOOLEAN
+            -- Is an integer value stored for `a_name`?
         do
             Result := integer_values.has (a_name)
         end
 
-    has_string_parameter (a_name: STRING_32): BOOLEAN
+    has_string_parameter (a_name: READABLE_STRING_32): BOOLEAN
             -- Is a string value stored for `a_name`?
         do
             Result := string_values.has (a_name)
         end
 
-    has_boolean_parameter (a_name: STRING_32): BOOLEAN
-            -- Is a boolean value stored for `a_name`?
+    has_boolean_parameter (a_name: READABLE_STRING_32): BOOLEAN
+            -- Is a Boolean value stored for `a_name`?
         do
             Result := boolean_values.has (a_name)
         end
 
-    has_integer_list_parameter (a_name: STRING_32): BOOLEAN
-            -- Is a integer list value stored for `a_name`?
+    has_integer_list_parameter (a_name: READABLE_STRING_32): BOOLEAN
+            -- Is an integer list value stored for `a_name`?
         do
             Result := integer_list_values.has (a_name)
         end
 
-    has_string_list_parameter (a_name: STRING_32): BOOLEAN
+    has_string_list_parameter (a_name: READABLE_STRING_32): BOOLEAN
             -- Is a string list value stored for `a_name`?
         do
             Result := string_list_values.has (a_name)
@@ -63,7 +63,7 @@ feature -- Status report
 
 feature -- Values
 
-    integer_parameter (a_name: STRING_32): INTEGER
+    integer_parameter (a_name: READABLE_STRING_32): INTEGER
             -- Stored integer value for `a_name`.
         require
             known_integer_parameter: has_integer_parameter (a_name)
@@ -71,7 +71,7 @@ feature -- Values
             Result := integer_values.item (a_name)
         end
 
-    string_parameter (a_name: STRING_32): STRING_32
+    string_parameter (a_name: READABLE_STRING_32): STRING_32
             -- A copy of the stored string.
         require
             known_string_parameter: has_string_parameter (a_name)
@@ -81,7 +81,7 @@ feature -- Values
             end
         end
 
-    boolean_parameter (a_name: STRING_32): BOOLEAN
+    boolean_parameter (a_name: READABLE_STRING_32): BOOLEAN
             -- Stored Boolean value for `a_name`.
         require
             known_boolean_parameter: has_boolean_parameter (a_name)
@@ -89,7 +89,7 @@ feature -- Values
             Result := boolean_values.item (a_name)
         end
 
-    integer_list_parameter (a_name: STRING_32): ARRAYED_LIST [INTEGER]
+    integer_list_parameter (a_name: READABLE_STRING_32): ARRAYED_LIST [INTEGER]
             -- A copy of the list.
         require
             known_list_parameter: has_integer_list_parameter (a_name)
@@ -102,7 +102,7 @@ feature -- Values
             end
         end
 
-    string_list_parameter (a_name: STRING_32): ARRAYED_LIST [STRING_32]
+    string_list_parameter (a_name: READABLE_STRING_32): ARRAYED_LIST [STRING_32]
             -- A copy of the list, including its strings.
         require
             known_list_parameter: has_string_list_parameter (a_name)
@@ -117,35 +117,35 @@ feature -- Values
 
 feature {CLI_PARSER} -- Population availability
 
-    can_put_integer (a_name: STRING_32): BOOLEAN
+    can_put_integer (a_name: READABLE_STRING_32): BOOLEAN
             -- Can this name store a value of this type without conflicting with another type?
         do
             Result := not has_string_parameter (a_name) and not has_boolean_parameter (a_name) and
                 not has_integer_list_parameter (a_name) and not has_string_list_parameter (a_name)
         end
 
-    can_put_string (a_name: STRING_32): BOOLEAN
+    can_put_string (a_name: READABLE_STRING_32): BOOLEAN
             -- Can this name store a value of this type without conflicting with another type?
         do
             Result := not has_integer_parameter (a_name) and not has_boolean_parameter (a_name) and
                 not has_integer_list_parameter (a_name) and not has_string_list_parameter (a_name)
         end
 
-    can_put_boolean (a_name: STRING_32): BOOLEAN
+    can_put_boolean (a_name: READABLE_STRING_32): BOOLEAN
             -- Can this name store a value of this type without conflicting with another type?
         do
             Result := not has_integer_parameter (a_name) and not has_string_parameter (a_name) and
                 not has_integer_list_parameter (a_name) and not has_string_list_parameter (a_name)
         end
 
-    can_put_integer_list (a_name: STRING_32): BOOLEAN
+    can_put_integer_list (a_name: READABLE_STRING_32): BOOLEAN
             -- Can this name store a value of this type without conflicting with another type?
         do
             Result := not has_integer_parameter (a_name) and not has_string_parameter (a_name) and
                 not has_boolean_parameter (a_name) and not has_string_list_parameter (a_name)
         end
 
-    can_put_string_list (a_name: STRING_32): BOOLEAN
+    can_put_string_list (a_name: READABLE_STRING_32): BOOLEAN
             -- Can this name store a value of this type without conflicting with another type?
         do
             Result := not has_integer_parameter (a_name) and not has_string_parameter (a_name) and
@@ -154,37 +154,37 @@ feature {CLI_PARSER} -- Population availability
 
 feature {CLI_PARSER} -- Population
 
-    put_integer (a_name: STRING_32; a_value: INTEGER)
-            -- Store a integer value for `a_name`.
+    put_integer (a_name: READABLE_STRING_32; a_value: INTEGER)
+            -- Store an integer value for `a_name`.
         require
             consistent_type: can_put_integer (a_name)
         do
-            integer_values.force (a_value, a_name.twin)
+            integer_values.force (a_value, a_name.to_string_32.twin)
         ensure
             stored: has_integer_parameter (a_name) and then integer_parameter (a_name) = a_value
         end
 
-    put_string (a_name, a_value: STRING_32)
+    put_string (a_name, a_value: READABLE_STRING_32)
             -- Store a copy of `a_value` for `a_name`.
         require
             consistent_type: can_put_string (a_name)
         do
-            string_values.force (a_value.twin, a_name.twin)
+            string_values.force (a_value.to_string_32.twin, a_name.to_string_32.twin)
         ensure
             stored: has_string_parameter (a_name) and then string_parameter (a_name).same_string (a_value)
         end
 
-    put_boolean (a_name: STRING_32; a_value: BOOLEAN)
-            -- Store a boolean value for `a_name`.
+    put_boolean (a_name: READABLE_STRING_32; a_value: BOOLEAN)
+            -- Store a Boolean value for `a_name`.
         require
             consistent_type: can_put_boolean (a_name)
         do
-            boolean_values.force (a_value, a_name.twin)
+            boolean_values.force (a_value, a_name.to_string_32.twin)
         ensure
             stored: has_boolean_parameter (a_name) and then boolean_parameter (a_name) = a_value
         end
 
-    put_integer_list (a_name: STRING_32; a_values: ITERABLE [INTEGER])
+    put_integer_list (a_name: READABLE_STRING_32; a_values: ITERABLE [INTEGER])
             -- Replace the whole list, copying caller-owned values.
         require
             consistent_type: can_put_integer_list (a_name)
@@ -195,10 +195,10 @@ feature {CLI_PARSER} -- Population
             across a_values as value loop
                 items.extend (value)
             end
-            integer_list_values.force (items, a_name.twin)
+            integer_list_values.force (items, a_name.to_string_32.twin)
         end
 
-    append_integer (a_name: STRING_32; a_value: INTEGER)
+    append_integer (a_name: READABLE_STRING_32; a_value: INTEGER)
             -- Append `a_value` to the stored integer list for `a_name`.
         require
             known_list_parameter: has_integer_list_parameter (a_name)
@@ -208,7 +208,7 @@ feature {CLI_PARSER} -- Population
             end
         end
 
-    put_string_list (a_name: STRING_32; a_values: ITERABLE [STRING_32])
+    put_string_list (a_name: READABLE_STRING_32; a_values: ITERABLE [READABLE_STRING_32])
             -- Replace the whole list, copying caller-owned values.
         require
             consistent_type: can_put_string_list (a_name)
@@ -217,18 +217,18 @@ feature {CLI_PARSER} -- Population
         do
             create items.make (Default_capacity)
             across a_values as value loop
-                items.extend (value.twin)
+                items.extend (value.to_string_32.twin)
             end
-            string_list_values.force (items, a_name.twin)
+            string_list_values.force (items, a_name.to_string_32.twin)
         end
 
-    append_string (a_name: STRING_32; a_value: STRING_32)
+    append_string (a_name: READABLE_STRING_32; a_value: READABLE_STRING_32)
             -- Append a copy of `a_value` to the stored string list for `a_name`.
         require
             known_list_parameter: has_string_list_parameter (a_name)
         do
             check attached string_list_values.item (a_name) as items then
-                items.extend (a_value.twin)
+                items.extend (a_value.to_string_32.twin)
             end
         end
 

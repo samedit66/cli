@@ -17,10 +17,14 @@ feature {NONE} -- Entry point
             l_arguments: ARGUMENTS_32
             l_application: CLI_APPLICATION
             l_tokens: ARRAYED_LIST [STRING_32]
+            l_immutable_tokens: ARRAYED_LIST [IMMUTABLE_STRING_32]
             i: INTEGER
         do
             create l_arguments
             if l_arguments.argument_count = 0 then
+                test_command_names
+                test_readable_inputs
+                test_application_lifecycle
                 test_definition_validation
                 test_values
                 test_inline_values
@@ -31,7 +35,14 @@ feature {NONE} -- Entry point
                 io.put_string ("parser tests passed%N")
             else
                 create l_application.make ("routing", "Command routing tests")
-                if l_arguments.argument (1).same_string ("single-required") then
+                if l_arguments.argument (1).starts_with ("automatic") then
+                    if l_arguments.argument (1).same_string ("automatic-custom") then
+                        l_application.add_command (create {AUTOMATIC_HELP_COMMAND}.make_custom)
+                    else
+                        l_application.add_command (create {AUTOMATIC_HELP_COMMAND}.make (
+                            l_arguments.argument (1).same_string ("automatic-conflict")))
+                    end
+                elseif l_arguments.argument (1).same_string ("single-required") then
                     l_application.add_command (create {ROUTING_COMMAND}.make_required (""))
                 else
                     if l_arguments.argument (1).same_string ("route-root-first") then
@@ -53,11 +64,117 @@ feature {NONE} -- Entry point
                     l_tokens.extend (l_arguments.argument (i))
                     i := i + 1
                 end
-                l_application.run_with_tokens (l_tokens)
+                if l_arguments.argument (1).same_string ("automatic-immutable") then
+                    create l_immutable_tokens.make (l_tokens.count)
+                    across l_tokens as token loop
+                        l_immutable_tokens.extend (create {IMMUTABLE_STRING_32}.make_from_string (token))
+                    end
+                    l_application.run_with_tokens (l_immutable_tokens)
+                else
+                    l_application.run_with_tokens (l_tokens)
+                end
             end
         end
 
 feature {NONE} -- Parser tests
+
+    test_command_names
+        local
+            l_name: STRING_32
+            l_command: ROUTING_COMMAND
+            l_application: CLI_APPLICATION
+        do
+            l_name := "pack"
+            create l_command.make (l_name)
+            create l_application.make ("tool", "Name ownership tests")
+            l_application.add_command (l_command)
+            l_name.replace_substring_all ("pack", "list")
+            check
+                copied_name: l_command.name.same_string ("pack")
+                registered_name_stable: l_application.has_command ("pack")
+                caller_mutation_isolated: not l_application.has_command ("list")
+                invocation_stable: l_application.command_help ("pack").has_substring ("tool pack")
+            end
+        end
+
+    test_readable_inputs
+        local
+            l_name, l_default, l_token: IMMUTABLE_STRING_32
+            l_parameter: CLI_PARAMETER
+            l_parser: CLI_PARSER
+            l_application: CLI_APPLICATION
+            l_command: AUTOMATIC_HELP_COMMAND
+        do
+            create l_name.make_from_string ("value")
+            create l_default.make_from_string ("default")
+            create l_token.make_from_string ("supplied")
+            create l_parameter.make_optional_string_argument (l_name, l_name, l_default)
+            create l_parser.make ({ARRAY [CLI_PARAMETER]} <<l_parameter>>)
+            l_parser.parse ({ARRAY [IMMUTABLE_STRING_32]} <<l_token>>)
+            check
+                immutable_token: l_parser.is_successful and then
+                    l_parser.values.string_parameter (l_name).same_string (l_token)
+                immutable_default: l_parameter.string_default.same_string (l_default)
+            end
+            create l_parameter.make_optional_string_list_option (l_name, l_name,
+                {ARRAY [IMMUTABLE_STRING_32]} <<l_default>>)
+            check
+                immutable_list_default: l_parameter.string_list_default.first.same_string (l_default)
+            end
+            create l_command.make (False)
+            l_command.add_optional_string_option (l_name, l_name, l_default)
+            l_command.add_optional_string_list_option ("items", l_name,
+                {ARRAY [IMMUTABLE_STRING_32]} <<l_default>>)
+            create l_application.make_single_command (l_name, l_command)
+            check
+                immutable_application_name: l_application.name.same_string (l_name)
+            end
+        end
+
+    test_application_lifecycle
+        local
+            l_first: CLI_APPLICATION
+            l_command: AUTOMATIC_HELP_COMMAND
+            l_parser: CLI_PARSER
+            l_help: CLI_PARAMETER
+            l_parameter: CLI_PARAMETER
+        do
+            create l_command.make (False)
+            create l_first.make_single_command ("first", l_command)
+            l_command.add_flag ("extra", "Added after registration")
+            l_command.set_short_name ("extra", 'x')
+            check
+                initialized_once: l_command.interface_count = 1
+                extension_visible: l_first.command_help ("").has_substring ("-x, --extra")
+                automatic_help_visible: l_first.command_help ("").has_substring ("-h, --help")
+            end
+            l_command.add_flag ("heading", "Late alias assignment")
+            l_command.set_short_name ("heading", 'h')
+            check
+                automatic_alias_released: not l_first.command_help ("").has_substring ("-h, --help")
+                explicit_alias_assigned: l_first.command_help ("").has_substring ("-h, --heading")
+            end
+            l_command.add_flag ("help", "Custom help")
+            check
+                automatic_definition_replaced: not l_first.command_help ("").has_substring ("Show command help")
+                custom_definition_visible: l_first.command_help ("").has_substring ("Custom help")
+            end
+            create l_help.make_help
+            create l_parameter.make_integer_argument ("count", "")
+            create l_parser.make ({ARRAY [CLI_PARAMETER]} <<l_parameter, l_help>>)
+            l_parser.parse ({ARRAY [STRING_32]} <<"--help">>)
+            check
+                help_bypasses_required: l_parser.help_requested and not l_parser.has_error
+                separate_outcome: not l_parser.is_successful
+                duplicate_definitions: not l_parser.are_valid_definitions (
+                    {ARRAY [CLI_PARAMETER]} <<l_parameter, l_parameter>>)
+            end
+            create l_parameter.make_optional_string_list_argument ("items", "", {ARRAY [STRING_32]} <<"original">>)
+            l_parameter.string_list_default.first.wipe_out
+            check
+                copied_defaults: l_parameter.string_list_default.first.same_string ("original")
+            end
+        end
 
     test_definition_validation
         local

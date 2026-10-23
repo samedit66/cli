@@ -15,11 +15,8 @@ feature {NONE} -- Entry point
             -- Run the example application.
         local
             application: CLI_APPLICATION
-            command: GREET_COMMAND
         do
-            create command
-            create application.make ("greet", command.description)
-            application.add_command (command)
+            create application.make_single_command ("greet", create {GREET_COMMAND})
             application.run
         end
 
