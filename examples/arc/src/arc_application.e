@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    ARC_APPLICATION
+class ARC_APPLICATION
 
 create
     make

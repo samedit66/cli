@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    JOIN_COMMAND
+class JOIN_COMMAND
 
 inherit
     CLI_COMMAND

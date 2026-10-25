@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    ARC_PACK_COMMAND
+class ARC_PACK_COMMAND
 
 inherit
     CLI_COMMAND

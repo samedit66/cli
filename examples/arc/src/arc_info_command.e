@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    ARC_INFO_COMMAND
+class ARC_INFO_COMMAND
 
 inherit
     CLI_COMMAND

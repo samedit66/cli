@@ -3,14 +3,10 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    CLI_PARAMETER
+class CLI_PARAMETER
 
 inherit
     CLI_STRING_ROUTINES
-        export
-            {NONE} all
-        end
 
 create
     make_integer_argument,

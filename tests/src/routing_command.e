@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    ROUTING_COMMAND
+class ROUTING_COMMAND
 
 inherit
     CLI_COMMAND

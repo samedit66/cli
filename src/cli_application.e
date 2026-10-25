@@ -3,14 +3,10 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    CLI_APPLICATION
+class CLI_APPLICATION
 
 inherit
     CLI_FAILURE
-        export
-            {NONE} fail
-        end
 
 create
     make,

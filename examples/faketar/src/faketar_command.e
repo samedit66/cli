@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    FAKETAR_COMMAND
+class FAKETAR_COMMAND
 
 inherit
     CLI_COMMAND

@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    CLI_STRING_ROUTINES
+class CLI_STRING_ROUTINES
 
 feature -- Validation
 

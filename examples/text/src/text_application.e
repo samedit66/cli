@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    TEXT_APPLICATION
+class TEXT_APPLICATION
 
 create
     make

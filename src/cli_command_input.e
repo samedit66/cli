@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    CLI_COMMAND_INPUT
+class CLI_COMMAND_INPUT
 
 create
     make

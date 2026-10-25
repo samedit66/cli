@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    REPEAT_COMMAND
+class REPEAT_COMMAND
 
 inherit
     CLI_COMMAND

@@ -3,14 +3,10 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-deferred class
-    CLI_COMMAND
+deferred class CLI_COMMAND
 
 inherit
     CLI_STRING_ROUTINES
-        export
-            {NONE} split
-        end
 
     CLI_FAILURE
         export
@@ -20,12 +16,12 @@ inherit
 feature -- Definition
 
     name: READABLE_STRING_32
-            -- Command name; its value remains stable after registration.
+            -- Command name. Displayed in the help.
         deferred
         end
 
     description: READABLE_STRING_32
-            -- Command description.
+            -- Command description. Displayed in the help.
         deferred
         end
 

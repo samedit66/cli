@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    AUTOMATIC_HELP_COMMAND
+class AUTOMATIC_HELP_COMMAND
 
 inherit
     CLI_COMMAND

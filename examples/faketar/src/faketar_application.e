@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    FAKETAR_APPLICATION
+class FAKETAR_APPLICATION
 
 create
     make

@@ -3,14 +3,10 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    CLI_PARSER
+class CLI_PARSER
 
 inherit
     CLI_STRING_ROUTINES
-        export
-            {NONE} all
-        end
 
 create
     make

@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    CLI_TESTS
+class CLI_TESTS
 
 create
     make

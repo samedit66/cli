@@ -3,8 +3,7 @@ note
     author: "samedit66"
     email: "samedit66@yandex.ru"
 
-class
-    GREET_COMMAND
+class GREET_COMMAND
 
 inherit
     CLI_COMMAND
