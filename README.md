@@ -14,10 +14,9 @@ Inspired by Python's [Cleo](https://github.com/python-poetry/cleo).
 
 ## Highlights
 
-- 💅 Describe your commands. Let cli deal with the [argument drama](docs/usage.md#commands-and-parameters).
-- 🎯 Typed values, explicit defaults. No stringly-typed jumpscares. Meet [CLI_COMMAND_INPUT](src/cli_command_input.e).
-- 🗣️ Multiword commands. Because one word is sometimes not enough. See [arc](examples/arc/README.md).
-- 📖 [`--help` included](docs/syntax.md#automatic-help). Your users can stop guessing.
+- 💅 [Declarative command interfaces](docs/usage.md#commands-and-parameters): define arguments, options, and flags; the library handles parsing and validation before executing the command.
+- 📖 [Automatic `--help`](docs/syntax.md#automatic-help): generate command help from the same definitions, including parameter types, defaults, and short aliases.
+- 🎯 [Flexible parameter definitions](docs/usage.md#commands-and-parameters): required or optional arguments and options with string, integer, or list values, plus boolean flags.
 
 ## Installation
 
@@ -54,8 +53,13 @@ feature -- Definition
             -- Command name used for selection.
 
     description: STRING_32 = "Greet someone"
+            -- Command summary displayed in help.
+
+feature -- Interface definition
 
     interface
+            -- Declare the command's arguments, options, and flags.
+            -- Called once per instance by the `CLI_APPLICATION`.
         do
             add_optional_string_argument ("name", "Person to greet", "world")
         end
@@ -63,7 +67,9 @@ feature -- Definition
 feature -- Execution
 
     handle (a_input: CLI_COMMAND_INPUT)
+            -- Greet the person using successfully parsed input.
         do
+            -- Access the parameters by calling `*_parameter`:
             io.put_string_32 ({STRING_32} "Hello, " + a_input.string_parameter ("name") + "!%N")
         end
 
@@ -74,6 +80,7 @@ Register it in your application's creation routine:
 
 ```eiffel
 make
+        -- Register the greeting command and process command-line input.
     local
         application: CLI_APPLICATION
     do
