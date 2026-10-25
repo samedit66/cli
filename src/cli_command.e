@@ -402,10 +402,10 @@ feature -- Help
                 Result.append (" [options]")
             end
             Result.append_character ('%N')
-            append_help_section (Result, "Arguments", 1)
-            append_help_section (Result, "Required options", 2)
-            append_help_section (Result, "Optional options", 3)
-            append_help_section (Result, "Flags", 4)
+            append_help_section (Result, "Arguments", Arguments_section)
+            append_help_section (Result, "Required options", Required_options_section)
+            append_help_section (Result, "Optional options", Optional_options_section)
+            append_help_section (Result, "Flags", Flags_section)
         end
 
 feature -- Execution
@@ -477,47 +477,53 @@ feature {NONE} -- Parameter definitions
             l_started, l_matches: BOOLEAN
         do
             across parameters as p loop
-                l_matches := (a_section = 1 and p.kind = p.Argument_kind) or
-                    (a_section = 2 and p.kind = p.Option_kind and not p.is_optional) or
-                    (a_section = 3 and p.kind = p.Option_kind and p.is_optional) or
-                    (a_section = 4 and p.kind = p.Flag_kind)
+                l_matches := (a_section = Arguments_section and p.kind = p.Argument_kind) or
+                    (a_section = Required_options_section and p.kind = p.Option_kind and not p.is_optional) or
+                    (a_section = Optional_options_section and p.kind = p.Option_kind and p.is_optional) or
+                    (a_section = Flags_section and p.kind = p.Flag_kind)
                 if l_matches then
                     if not l_started then
                         a_text.append ({STRING_32} "%N" + a_title + ":%N")
                         l_started := True
                     end
-                    a_text.append ("  ")
-                    if p.kind = p.Argument_kind then
-                        a_text.append (p.name + " <" + parameter_type_name (p) + ">")
-                    else
-                        if p.has_short_name then
-                            a_text.append_character ('-')
-                            a_text.append_character (p.short_name)
-                            a_text.append (", ")
-                        end
-                        a_text.append ({STRING_32} "--" + p.name)
-                        if p.kind = p.Option_kind then
-                            a_text.append ({STRING_32} " <" + parameter_type_name (p) + ">")
-                        end
-                    end
-                    a_text.append ({STRING_32} "  " + p.description)
-                    if p.is_multiple and p.kind = p.Option_kind then
-                        a_text.append (" (repeatable)")
-                    end
-                    if p.kind /= p.Flag_kind then
-                        if not p.is_optional then
-                            a_text.append (" (required)")
-                        elseif p.is_multiple then
-                            a_text.append ({STRING_32} " (default: " + list_default_text (p) + ")")
-                        elseif p.value_type = p.Integer_type then
-                            a_text.append ({STRING_32} " (default: " + p.integer_default.out + ")")
-                        else
-                            a_text.append ({STRING_32} " (default: %"" + p.string_default + "%")")
-                        end
-                    end
-                    a_text.append_character ('%N')
+                    append_parameter_help (a_text, p)
                 end
             end
+        end
+
+    append_parameter_help (a_text: STRING_32; a_parameter: CLI_PARAMETER)
+            -- Append one parameter's spelling, description, and value rules.
+        do
+            a_text.append ("  ")
+            if a_parameter.kind = a_parameter.Argument_kind then
+                a_text.append (a_parameter.name + " <" + parameter_type_name (a_parameter) + ">")
+            else
+                if a_parameter.has_short_name then
+                    a_text.append_character ('-')
+                    a_text.append_character (a_parameter.short_name)
+                    a_text.append (", ")
+                end
+                a_text.append ({STRING_32} "--" + a_parameter.name)
+                if a_parameter.kind = a_parameter.Option_kind then
+                    a_text.append ({STRING_32} " <" + parameter_type_name (a_parameter) + ">")
+                end
+            end
+            a_text.append ({STRING_32} "  " + a_parameter.description)
+            if a_parameter.is_multiple and a_parameter.kind = a_parameter.Option_kind then
+                a_text.append (" (repeatable)")
+            end
+            if a_parameter.kind /= a_parameter.Flag_kind then
+                if not a_parameter.is_optional then
+                    a_text.append (" (required)")
+                elseif a_parameter.is_multiple then
+                    a_text.append ({STRING_32} " (default: " + list_default_text (a_parameter) + ")")
+                elseif a_parameter.value_type = a_parameter.Integer_type then
+                    a_text.append ({STRING_32} " (default: " + a_parameter.integer_default.out + ")")
+                else
+                    a_text.append ({STRING_32} " (default: %"" + a_parameter.string_default + "%")")
+                end
+            end
+            a_text.append_character ('%N')
         end
 
     register_parameter (a_parameter: CLI_PARAMETER)
@@ -545,6 +551,13 @@ feature {NONE} -- Automatic help
 
     automatic_help: detachable CLI_PARAMETER
             -- Automatically added definition, replaceable by an explicit one.
+
+feature {NONE} -- Help sections
+
+    Arguments_section: INTEGER = 1
+    Required_options_section: INTEGER = 2
+    Optional_options_section: INTEGER = 3
+    Flags_section: INTEGER = 4
 
 feature {NONE} -- Capacity
 

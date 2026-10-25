@@ -39,10 +39,7 @@ feature {NONE} -- Initialization
         require
             valid_name: is_valid_name (a_name)
         do
-            create name.make_from_string (a_name)
-            create description.make_from_string (a_description)
-            create string_default.make_empty
-            action := Store_action
+            initialize_metadata (a_name, a_description, "")
             kind := Argument_kind
             value_type := Integer_type
             is_optional := False
@@ -53,10 +50,7 @@ feature {NONE} -- Initialization
         require
             valid_name: is_valid_name (a_name)
         do
-            create name.make_from_string (a_name)
-            create description.make_from_string (a_description)
-            create string_default.make_empty
-            action := Store_action
+            initialize_metadata (a_name, a_description, "")
             kind := Argument_kind
             value_type := Integer_type
             is_optional := True
@@ -68,10 +62,7 @@ feature {NONE} -- Initialization
         require
             valid_name: is_valid_name (a_name)
         do
-            create name.make_from_string (a_name)
-            create description.make_from_string (a_description)
-            create string_default.make_empty
-            action := Store_action
+            initialize_metadata (a_name, a_description, "")
             kind := Option_kind
             value_type := Integer_type
             is_optional := False
@@ -82,10 +73,7 @@ feature {NONE} -- Initialization
         require
             valid_name: is_valid_name (a_name)
         do
-            create name.make_from_string (a_name)
-            create description.make_from_string (a_description)
-            create string_default.make_empty
-            action := Store_action
+            initialize_metadata (a_name, a_description, "")
             kind := Option_kind
             value_type := Integer_type
             is_optional := True
@@ -97,10 +85,7 @@ feature {NONE} -- Initialization
         require
             valid_name: is_valid_name (a_name)
         do
-            create name.make_from_string (a_name)
-            create description.make_from_string (a_description)
-            create string_default.make_empty
-            action := Store_action
+            initialize_metadata (a_name, a_description, "")
             kind := Argument_kind
             value_type := String_type
             is_optional := False
@@ -111,14 +96,10 @@ feature {NONE} -- Initialization
         require
             valid_name: is_valid_name (a_name)
         do
-            create name.make_from_string (a_name)
-            create description.make_from_string (a_description)
-            create string_default.make_empty
-            action := Store_action
+            initialize_metadata (a_name, a_description, a_default)
             kind := Argument_kind
             value_type := String_type
             is_optional := True
-            create string_default.make_from_string (a_default)
         end
 
     make_string_option (a_name, a_description: READABLE_STRING_32)
@@ -126,10 +107,7 @@ feature {NONE} -- Initialization
         require
             valid_name: is_valid_name (a_name)
         do
-            create name.make_from_string (a_name)
-            create description.make_from_string (a_description)
-            create string_default.make_empty
-            action := Store_action
+            initialize_metadata (a_name, a_description, "")
             kind := Option_kind
             value_type := String_type
             is_optional := False
@@ -140,14 +118,10 @@ feature {NONE} -- Initialization
         require
             valid_name: is_valid_name (a_name)
         do
-            create name.make_from_string (a_name)
-            create description.make_from_string (a_description)
-            create string_default.make_empty
-            action := Store_action
+            initialize_metadata (a_name, a_description, a_default)
             kind := Option_kind
             value_type := String_type
             is_optional := True
-            create string_default.make_from_string (a_default)
         end
 
     make_flag (a_name, a_description: READABLE_STRING_32)
@@ -155,10 +129,7 @@ feature {NONE} -- Initialization
         require
             valid_name: is_valid_name (a_name)
         do
-            create name.make_from_string (a_name)
-            create description.make_from_string (a_description)
-            create string_default.make_empty
-            action := Store_action
+            initialize_metadata (a_name, a_description, "")
             kind := Flag_kind
             value_type := Boolean_type
             is_optional := True
@@ -253,6 +224,19 @@ feature {NONE} -- Initialization
             across a_default as value loop
                 string_list_storage.extend (value.to_string_32.twin)
             end
+        end
+
+feature {NONE} -- Metadata initialization
+
+    initialize_metadata (a_name, a_description, a_string_default: READABLE_STRING_32)
+            -- Snapshot metadata and establish the ordinary store action.
+        require
+            valid_name: is_valid_name (a_name)
+        do
+            create name.make_from_string (a_name)
+            create description.make_from_string (a_description)
+            create string_default.make_from_string (a_string_default)
+            action := Store_action
         end
 
 feature -- Validation
