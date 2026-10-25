@@ -41,32 +41,10 @@ in the same change when its instructions or examples become inaccurate.
 - `examples/*/README.md`: each example's interface, build commands, and invocations.
   Keep these synchronized with the corresponding source and integration checks.
 
-## Eiffel source documentation
-
-- Start every Eiffel class, including examples and tests, with a `note` clause.
-  Include a short `description`, `author`, and `email`, in that order. Describe
-  the role of the instances; use established author details rather than guessing.
-- Add `copyright` and `license` only when the ownership and license are known.
-  Do not add manually maintained `date` or `revision` fields; Git records history.
-- Give every public feature and creation procedure a short English header comment.
-  Cover selectively exported features too. Document redefinitions where they are
-  declared, even when the inherited feature already has a comment.
-- Use an imperative sentence for a command, a noun phrase for a value query,
-  and a question for a Boolean query. Keep the existing feature-section style.
-- Describe purpose and material usage rules, including result ownership,
-  availability, and defaults. Keep exact obligations in contracts; do not repeat
-  the implementation or use a help-text attribute as its own documentation.
-- Update source comments and class descriptions when their meaning changes.
-  Keep them consistent with the usage and syntax guides.
-
 ## Editing and verification
 
-- Keep code comments and documentation in English. Preserve Eiffel contracts,
-  command-query separation, void safety, and caller-owned input.
 - Keep parser transitions explicit. Command selection and automatic help belong
   to the application; the parser handles parameter definitions and tokens.
-- Add focused regression coverage for changed behavior. Do not edit generated
-  `build/`, `EIFGENs/`, or `.gobo/` contents.
 - For library changes, build all four examples and `tests/` with `just gobo` and
   `just eiffelstudio` in each directory. Then run
   `python3 tests/check_examples.py` from the repository root. The script does not
