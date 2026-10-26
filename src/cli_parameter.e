@@ -8,6 +8,8 @@ class CLI_PARAMETER
 inherit
     CLI_STRING_ROUTINES
 
+    CLI_CHOICE_ROUTINES
+
 create
     make_integer_argument,
     make_optional_integer_argument,
@@ -26,7 +28,15 @@ create
     make_string_list_argument,
     make_optional_string_list_argument,
     make_string_list_option,
-    make_optional_string_list_option
+    make_optional_string_list_option,
+    make_integer_choice_argument,
+    make_optional_integer_choice_argument,
+    make_integer_choice_option,
+    make_optional_integer_choice_option,
+    make_string_choice_argument,
+    make_optional_string_choice_argument,
+    make_string_choice_option,
+    make_optional_string_choice_option
 
 feature {NONE} -- Initialization
 
@@ -222,6 +232,134 @@ feature {NONE} -- Initialization
             end
         end
 
+feature {NONE} -- Choice initialization
+
+    make_integer_choice_argument (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [INTEGER])
+            -- Create a required integer choice argument.
+        require
+            valid_name: is_valid_name (a_name)
+            valid_choices: are_valid_integer_choices (a_choices)
+        do
+            make_integer_argument (a_name, a_description)
+            across a_choices as value loop
+                integer_choice_storage.extend (value)
+            end
+        ensure
+            choices_defined: has_choices
+            scalar: not is_multiple
+        end
+
+    make_optional_integer_choice_argument (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [INTEGER]; a_default: INTEGER)
+            -- Create a defaulted integer choice argument.
+        require
+            valid_name: is_valid_name (a_name)
+            valid_choices: are_valid_integer_choices (a_choices)
+            valid_default: has_integer_choice (a_choices, a_default)
+        do
+            make_integer_choice_argument (a_name, a_description, a_choices)
+            is_optional := True
+            integer_default := a_default
+        ensure
+            choices_defined: has_choices
+            scalar: not is_multiple
+        end
+
+    make_integer_choice_option (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [INTEGER])
+            -- Create a required integer choice option.
+        require
+            valid_name: is_valid_name (a_name)
+            valid_choices: are_valid_integer_choices (a_choices)
+        do
+            make_integer_option (a_name, a_description)
+            across a_choices as value loop
+                integer_choice_storage.extend (value)
+            end
+        ensure
+            choices_defined: has_choices
+            scalar: not is_multiple
+        end
+
+    make_optional_integer_choice_option (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [INTEGER]; a_default: INTEGER)
+            -- Create a defaulted integer choice option.
+        require
+            valid_name: is_valid_name (a_name)
+            valid_choices: are_valid_integer_choices (a_choices)
+            valid_default: has_integer_choice (a_choices, a_default)
+        do
+            make_integer_choice_option (a_name, a_description, a_choices)
+            is_optional := True
+            integer_default := a_default
+        ensure
+            choices_defined: has_choices
+            scalar: not is_multiple
+        end
+
+    make_string_choice_argument (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [READABLE_STRING_32]; a_case_sensitive: BOOLEAN)
+            -- Create a required string choice argument.
+        require
+            valid_name: is_valid_name (a_name)
+            valid_choices: are_valid_string_choices (a_choices, a_case_sensitive)
+        do
+            make_string_argument (a_name, a_description)
+            is_case_sensitive := a_case_sensitive
+            across a_choices as value loop
+                string_choice_storage.extend (create {IMMUTABLE_STRING_32}.make_from_string (value))
+            end
+        ensure
+            choices_defined: has_choices
+            scalar: not is_multiple
+        end
+
+    make_optional_string_choice_argument (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [READABLE_STRING_32]; a_case_sensitive: BOOLEAN; a_default: READABLE_STRING_32)
+            -- Create a defaulted string choice argument.
+        require
+            valid_name: is_valid_name (a_name)
+            valid_choices: are_valid_string_choices (a_choices, a_case_sensitive)
+            valid_default: has_string_choice (a_choices, a_default, a_case_sensitive)
+        do
+            make_string_choice_argument (a_name, a_description, a_choices, a_case_sensitive)
+            is_optional := True
+            check attached matching_string_choice (a_default) as l_choice then
+                string_default := l_choice
+            end
+        ensure
+            choices_defined: has_choices
+            scalar: not is_multiple
+        end
+
+    make_string_choice_option (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [READABLE_STRING_32]; a_case_sensitive: BOOLEAN)
+            -- Create a required string choice option.
+        require
+            valid_name: is_valid_name (a_name)
+            valid_choices: are_valid_string_choices (a_choices, a_case_sensitive)
+        do
+            make_string_option (a_name, a_description)
+            is_case_sensitive := a_case_sensitive
+            across a_choices as value loop
+                string_choice_storage.extend (create {IMMUTABLE_STRING_32}.make_from_string (value))
+            end
+        ensure
+            choices_defined: has_choices
+            scalar: not is_multiple
+        end
+
+    make_optional_string_choice_option (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [READABLE_STRING_32]; a_case_sensitive: BOOLEAN; a_default: READABLE_STRING_32)
+            -- Create a defaulted string choice option.
+        require
+            valid_name: is_valid_name (a_name)
+            valid_choices: are_valid_string_choices (a_choices, a_case_sensitive)
+            valid_default: has_string_choice (a_choices, a_default, a_case_sensitive)
+        do
+            make_string_choice_option (a_name, a_description, a_choices, a_case_sensitive)
+            is_optional := True
+            check attached matching_string_choice (a_default) as l_choice then
+                string_default := l_choice
+            end
+        ensure
+            choices_defined: has_choices
+            scalar: not is_multiple
+        end
+
 feature {NONE} -- Metadata initialization
 
     initialize_metadata (a_name, a_description, a_string_default: READABLE_STRING_32)
@@ -301,6 +439,67 @@ feature -- Access
             end
         end
 
+feature -- Choices
+
+    has_choices: BOOLEAN
+            -- Is this scalar parameter restricted to declared choices?
+        do
+            Result := not integer_choice_storage.is_empty or else not string_choice_storage.is_empty
+        end
+
+    is_case_sensitive: BOOLEAN
+            -- Are string choices compared with exact casing?
+
+    accepts_integer_choice (a_value: INTEGER): BOOLEAN
+            -- Is `a_value` one of the declared integer choices?
+        require
+            integer_choice: has_choices and value_type = Integer_type
+        do
+            Result := integer_choice_storage.has (a_value)
+        end
+
+    matching_string_choice (a_value: READABLE_STRING_32): detachable IMMUTABLE_STRING_32
+            -- Declared spelling matching `a_value`, or Void; immutable shared result.
+        require
+            string_choice: has_choices and value_type = String_type
+        do
+            across string_choice_storage as value loop
+                if matching_choice_strings (value, a_value, is_case_sensitive) then
+                    Result := value
+                end
+            end
+        end
+
+    choices_text: STRING_32
+            -- Fresh display of choices in declaration order, with quoted strings.
+        require
+            choice_parameter: has_choices
+        do
+            create Result.make_empty
+            across integer_choice_storage as value loop
+                if not Result.is_empty then Result.append (", ") end
+                Result.append_string_general (value.out)
+            end
+            across string_choice_storage as value loop
+                if not Result.is_empty then Result.append (", ") end
+                Result.append_character ('%"')
+                Result.append (value)
+                Result.append_character ('%"')
+            end
+        end
+
+feature {NONE} -- Choice storage
+
+    integer_choice_storage: ARRAYED_LIST [INTEGER]
+        attribute
+            create Result.make (Default_capacity)
+        end
+
+    string_choice_storage: ARRAYED_LIST [IMMUTABLE_STRING_32]
+        attribute
+            create Result.make (Default_capacity)
+        end
+
 feature {NONE} -- Defaults
 
     integer_list_storage: ARRAYED_LIST [INTEGER]
@@ -362,6 +561,13 @@ feature -- Value types
             -- Boolean parameter value type.
 
 invariant
+    scalar_choices: has_choices implies not is_multiple and kind /= Flag_kind
+    integer_choices_typed: not integer_choice_storage.is_empty implies value_type = Integer_type
+    string_choices_typed: not string_choice_storage.is_empty implies value_type = String_type
+    valid_integer_choices: not integer_choice_storage.is_empty implies are_valid_integer_choices (integer_choice_storage)
+    valid_string_choices: not string_choice_storage.is_empty implies are_valid_string_choices (string_choice_storage, is_case_sensitive)
+    integer_choice_default: has_choices and is_optional and value_type = Integer_type implies accepts_integer_choice (integer_default)
+    string_choice_default: has_choices and is_optional and value_type = String_type implies matching_string_choice (string_default) /= Void
     valid_action: action = Store_action or action = Help_action
     help_is_flag: action = Help_action implies kind = Flag_kind
     no_flag_lists: is_multiple implies kind /= Flag_kind

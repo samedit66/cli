@@ -8,6 +8,8 @@ deferred class CLI_COMMAND
 inherit
     CLI_STRING_ROUTINES
 
+    CLI_CHOICE_ROUTINES
+
     CLI_FAILURE
         export
             {ANY} fail
@@ -181,6 +183,122 @@ feature -- String parameters
             l_parameter: CLI_PARAMETER
         do
             create l_parameter.make_optional_string_option (a_name, a_description, a_default)
+            register_parameter (l_parameter)
+        end
+
+feature -- Choice parameters
+
+    add_integer_choice_argument (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [INTEGER])
+            -- Add a required integer choice argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
+            required_argument_before_optional: not has_optional_argument
+            valid_choices: are_valid_integer_choices (a_choices)
+        local
+            l_parameter: CLI_PARAMETER
+        do
+            create l_parameter.make_integer_choice_argument (a_name, a_description, a_choices)
+            register_parameter (l_parameter)
+        end
+
+    add_optional_integer_choice_argument (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [INTEGER]; a_default: INTEGER)
+            -- Add a defaulted integer choice argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
+            valid_choices: are_valid_integer_choices (a_choices)
+            valid_default: has_integer_choice (a_choices, a_default)
+        local
+            l_parameter: CLI_PARAMETER
+        do
+            create l_parameter.make_optional_integer_choice_argument (a_name, a_description, a_choices, a_default)
+            register_parameter (l_parameter)
+        end
+
+    add_integer_choice_option (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [INTEGER])
+            -- Add a required integer choice option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            valid_choices: are_valid_integer_choices (a_choices)
+        local
+            l_parameter: CLI_PARAMETER
+        do
+            create l_parameter.make_integer_choice_option (a_name, a_description, a_choices)
+            register_parameter (l_parameter)
+        end
+
+    add_optional_integer_choice_option (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [INTEGER]; a_default: INTEGER)
+            -- Add a defaulted integer choice option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            valid_choices: are_valid_integer_choices (a_choices)
+            valid_default: has_integer_choice (a_choices, a_default)
+        local
+            l_parameter: CLI_PARAMETER
+        do
+            create l_parameter.make_optional_integer_choice_option (a_name, a_description, a_choices, a_default)
+            register_parameter (l_parameter)
+        end
+
+    add_string_choice_argument (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [READABLE_STRING_32]; a_case_sensitive: BOOLEAN)
+            -- Add a required string choice argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
+            required_argument_before_optional: not has_optional_argument
+            valid_choices: are_valid_string_choices (a_choices, a_case_sensitive)
+        local
+            l_parameter: CLI_PARAMETER
+        do
+            create l_parameter.make_string_choice_argument (a_name, a_description, a_choices, a_case_sensitive)
+            register_parameter (l_parameter)
+        end
+
+    add_optional_string_choice_argument (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [READABLE_STRING_32]; a_case_sensitive: BOOLEAN; a_default: READABLE_STRING_32)
+            -- Add a defaulted string choice argument.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            positional_list_last: not has_positional_list
+            valid_choices: are_valid_string_choices (a_choices, a_case_sensitive)
+            valid_default: has_string_choice (a_choices, a_default, a_case_sensitive)
+        local
+            l_parameter: CLI_PARAMETER
+        do
+            create l_parameter.make_optional_string_choice_argument (a_name, a_description, a_choices, a_case_sensitive, a_default)
+            register_parameter (l_parameter)
+        end
+
+    add_string_choice_option (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [READABLE_STRING_32]; a_case_sensitive: BOOLEAN)
+            -- Add a required string choice option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            valid_choices: are_valid_string_choices (a_choices, a_case_sensitive)
+        local
+            l_parameter: CLI_PARAMETER
+        do
+            create l_parameter.make_string_choice_option (a_name, a_description, a_choices, a_case_sensitive)
+            register_parameter (l_parameter)
+        end
+
+    add_optional_string_choice_option (a_name, a_description: READABLE_STRING_32; a_choices: ITERABLE [READABLE_STRING_32]; a_case_sensitive: BOOLEAN; a_default: READABLE_STRING_32)
+            -- Add a defaulted string choice option.
+        require
+            valid_name: is_valid_parameter_name (a_name)
+            unique_name: is_available_parameter_name (a_name)
+            valid_choices: are_valid_string_choices (a_choices, a_case_sensitive)
+            valid_default: has_string_choice (a_choices, a_default, a_case_sensitive)
+        local
+            l_parameter: CLI_PARAMETER
+        do
+            create l_parameter.make_optional_string_choice_option (a_name, a_description, a_choices, a_case_sensitive, a_default)
             register_parameter (l_parameter)
         end
 
@@ -505,6 +623,12 @@ feature {NONE} -- Parameter definitions
                 end
             end
             a_text.append ({STRING_32} "  " + a_parameter.description)
+            if a_parameter.has_choices then
+                a_text.append ({STRING_32} " (choices: " + a_parameter.choices_text + ")")
+                if a_parameter.value_type = a_parameter.String_type and then not a_parameter.is_case_sensitive then
+                    a_text.append (" (case insensitive)")
+                end
+            end
             if a_parameter.is_multiple and a_parameter.kind = a_parameter.Option_kind then
                 a_text.append (" (repeatable)")
             end

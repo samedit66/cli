@@ -52,7 +52,7 @@ python3 tests/check_examples.py
 
 The script executes the built programs and checks their output and exit codes.
 It also runs the assertion-enabled test application for parser behavior, defaults,
-input ownership, splitting, and default-command help. Missing executables are
+input ownership, choices and comparison modes, splitting, and default-command help. Missing executables are
 reported as failures; the script does not build them or skip them.
 
 ## Static checks

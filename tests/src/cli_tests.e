@@ -26,15 +26,20 @@ feature {NONE} -- Entry point
                 test_application_lifecycle
                 test_definition_validation
                 test_values
+                test_choices
                 test_inline_values
                 test_failures
                 test_token_ownership
                 test_split
                 test_default_help
                 io.put_string ("parser tests passed%N")
+            elseif l_arguments.argument (1).starts_with ("invalid-choice-") then
+                test_invalid_choice_definition (l_arguments.argument (1))
             else
                 create l_application.make ("routing", "Command routing tests")
-                if l_arguments.argument (1).starts_with ("automatic") then
+                if l_arguments.argument (1).same_string ("choices") then
+                    l_application.add_command (create {CHOICE_COMMAND})
+                elseif l_arguments.argument (1).starts_with ("automatic") then
                     if l_arguments.argument (1).same_string ("automatic-custom") then
                         l_application.add_command (create {AUTOMATIC_HELP_COMMAND}.make_custom)
                     else
@@ -225,6 +230,133 @@ feature {NONE} -- Parser tests
                 application_overview: l_application.help.has_substring ("(default)")
             end
         end
+
+    test_invalid_choice_definition (a_case: READABLE_STRING_32)
+            -- Exercise a declaration precondition in a separate test process.
+        local
+            l_command: CHOICE_COMMAND
+        do
+            create l_command
+            if a_case.same_string ("invalid-choice-empty-integer") then
+                l_command.add_integer_choice_argument ("value", "", {ARRAY [INTEGER]} <<>>)
+            elseif a_case.same_string ("invalid-choice-duplicate-integer") then
+                l_command.add_integer_choice_option ("value", "", {ARRAY [INTEGER]} <<1, 1>>)
+            elseif a_case.same_string ("invalid-choice-empty-string") then
+                l_command.add_string_choice_argument ("value", "", {ARRAY [STRING_32]} <<>>, l_command.Case_sensitive)
+            elseif a_case.same_string ("invalid-choice-duplicate-string") then
+                l_command.add_string_choice_option ("value", "", {ARRAY [STRING_32]} <<"a", "a">>, l_command.Case_sensitive)
+            elseif a_case.same_string ("invalid-choice-case-collision") then
+                l_command.add_string_choice_option ("value", "", {ARRAY [STRING_32]} <<"Json", "JSON">>, l_command.Case_insensitive)
+            elseif a_case.same_string ("invalid-choice-integer-default") then
+                l_command.add_optional_integer_choice_option ("value", "", {ARRAY [INTEGER]} <<1, 3>>, 2)
+            elseif a_case.same_string ("invalid-choice-string-default") then
+                l_command.add_optional_string_choice_argument ("value", "", {ARRAY [STRING_32]} <<"Json">>, l_command.Case_insensitive, "xml")
+            elseif a_case.same_string ("invalid-choice-sensitive-default") then
+                l_command.add_optional_string_choice_option ("value", "", {ARRAY [STRING_32]} <<"Json">>, l_command.Case_sensitive, "JSON")
+            end
+        end
+
+    test_choices
+        local
+            l_parameters: ARRAY [CLI_PARAMETER]
+            l_parser: CLI_PARSER
+            l_parameter: CLI_PARAMETER
+            l_routines: CLI_CHOICE_ROUTINES
+            l_choices: ARRAY [STRING_32]
+            l_integers: ARRAY [INTEGER]
+            l_value: STRING_32
+            l_command: CHOICE_COMMAND
+            l_application: CLI_APPLICATION
+            l_help: STRING_32
+        do
+            create l_routines
+            check
+                empty_integers: not l_routines.are_valid_integer_choices ({ARRAY [INTEGER]} <<>>)
+                duplicate_integers: not l_routines.are_valid_integer_choices ({ARRAY [INTEGER]} <<1, 1>>)
+                empty_strings: not l_routines.are_valid_string_choices ({ARRAY [STRING_32]} <<>>, l_routines.Case_sensitive)
+                duplicate_strings: not l_routines.are_valid_string_choices ({ARRAY [STRING_32]} <<"a", "a">>, l_routines.Case_sensitive)
+                case_collision: not l_routines.are_valid_string_choices ({ARRAY [STRING_32]} <<"JSON", "json">>, l_routines.Case_insensitive)
+                distinct_casing: l_routines.are_valid_string_choices ({ARRAY [STRING_32]} <<"JSON", "json">>, l_routines.Case_sensitive)
+                invalid_default: not l_routines.has_integer_choice ({ARRAY [INTEGER]} <<1, 3>>, 2)
+                invalid_string_default: not l_routines.has_string_choice ({ARRAY [STRING_32]} <<"json">>, "xml", l_routines.Case_insensitive)
+            end
+            l_parameters := <<
+                create {CLI_PARAMETER}.make_integer_choice_argument ("level", "", {ARRAY [INTEGER]} <<-1, 3>>),
+                create {CLI_PARAMETER}.make_string_choice_argument ("format", "", {ARRAY [STRING_32]} <<"JSON", "yaml">>, l_routines.Case_insensitive),
+                create {CLI_PARAMETER}.make_optional_integer_choice_argument ("optional-level", "", {ARRAY [INTEGER]} <<0, 9>>, 9),
+                create {CLI_PARAMETER}.make_optional_string_choice_argument ("optional-format", "", {ARRAY [STRING_32]} <<"Text", "Binary">>, l_routines.Case_insensitive, "TEXT"),
+                create {CLI_PARAMETER}.make_integer_choice_option ("number", "", {ARRAY [INTEGER]} <<1, 3>>),
+                create {CLI_PARAMETER}.make_string_choice_option ("mode", "", {ARRAY [STRING_32]} <<"Fast", "fast">>, l_routines.Case_sensitive),
+                create {CLI_PARAMETER}.make_optional_integer_choice_option ("count", "", {ARRAY [INTEGER]} <<0, 6>>, 6),
+                create {CLI_PARAMETER}.make_optional_string_choice_option ("color", "", {ARRAY [STRING_32]} <<"Auto", "Never">>, l_routines.Case_insensitive, "AUTO")
+            >>
+            create l_parser.make (l_parameters)
+            l_parser.parse ({ARRAY [STRING_32]} <<"--number=+3", "--mode", "Fast", "--", "-1", "jSoN">>)
+            check
+                successful: l_parser.is_successful
+                negative_integer: l_parser.values.integer_parameter ("level") = -1
+                converted_integer: l_parser.values.integer_parameter ("number") = 3
+                canonical_argument: l_parser.values.string_parameter ("format").same_string ("JSON")
+                sensitive_option: l_parser.values.string_parameter ("mode").same_string ("Fast")
+                default_argument: l_parser.values.integer_parameter ("optional-level") = 9
+                canonical_argument_default: l_parser.values.string_parameter ("optional-format").same_string ("Text")
+                default_option: l_parser.values.integer_parameter ("count") = 6
+                canonical_option_default: l_parser.values.string_parameter ("color").same_string ("Auto")
+            end
+            create l_parser.make (l_parameters)
+            l_parser.parse ({ARRAY [STRING_32]} <<"3", "YAML", "0", "binary", "--number", "1", "--mode=fast", "--count=0", "--color=NEVER">>)
+            check
+                overrides_successful: l_parser.is_successful
+                integer_override: l_parser.values.integer_parameter ("optional-level") = 0
+                string_override: l_parser.values.string_parameter ("optional-format").same_string ("Binary")
+                option_override: l_parser.values.string_parameter ("color").same_string ("Never")
+            end
+            assert_error (l_parameters [1], {ARRAY [STRING_32]} <<"2">>, "Invalid choice for level: 2; expected one of: -1, 3")
+            assert_error (l_parameters [1], {ARRAY [STRING_32]} <<"2147483648">>, "Invalid integer for level: 2147483648")
+            assert_error (l_parameters [1], {ARRAY [STRING_32]} <<>>, "Missing required parameter: level")
+            assert_error (l_parameters [2], {ARRAY [STRING_32]} <<"xml">>, "Invalid choice for format: xml; expected one of: %"JSON%", %"yaml%"")
+            assert_error (l_parameters [6], {ARRAY [STRING_32]} <<"--mode=FAST">>, "Invalid choice for mode: FAST; expected one of: %"Fast%", %"fast%"")
+            assert_error (l_parameters [7], {ARRAY [STRING_32]} <<"--count=0", "--count=6">>, "Repeated parameter: count")
+            create l_parameter.make_string_choice_argument ("unicode", "", {ARRAY [STRING_32]} <<{STRING_32} "%/1046/%/1040/%/1056/", "", "%/223/", "ss">>, l_routines.Case_insensitive)
+            create l_parser.make ({ARRAY [CLI_PARAMETER]} <<l_parameter>>)
+            l_parser.parse ({ARRAY [STRING_32]} <<{STRING_32} "%/1078/%/1072/%/1088/">>)
+            check
+                unicode_canonical: l_parser.is_successful and then l_parser.values.string_parameter ("unicode").same_string ({STRING_32} "%/1046/%/1040/%/1056/")
+            end
+            create l_parser.make ({ARRAY [CLI_PARAMETER]} <<l_parameter>>)
+            l_parser.parse ({ARRAY [STRING_32]} <<"">>)
+            check empty_choice: l_parser.is_successful and then l_parser.values.string_parameter ("unicode").is_empty end
+            l_choices := <<"Json", "Yaml">>
+            create l_parameter.make_optional_string_choice_option ("format", "", l_choices, l_routines.Case_insensitive, "JSON")
+            l_choices [1].wipe_out
+            l_choices [2] := "xml"
+            l_parameter.choices_text.wipe_out
+            create l_parser.make ({ARRAY [CLI_PARAMETER]} <<l_parameter>>)
+            l_parser.parse ({ARRAY [STRING_32]} <<"--format=json">>)
+            l_value := l_parser.values.string_parameter ("format")
+            l_value.wipe_out
+            check
+                choices_snapshotted: l_parameter.choices_text.same_string ("%"Json%", %"Yaml%"")
+                default_snapshotted: l_parameter.string_default.same_string ("Json")
+                result_isolated: attached l_parameter.matching_string_choice ("JSON") as l_match and then l_match.same_string ("Json")
+            end
+            l_integers := <<1, 3>>
+            create l_parameter.make_integer_choice_option ("level", "", l_integers)
+            l_integers [1] := 2
+            check integer_snapshot: l_parameter.accepts_integer_choice (1) and not l_parameter.accepts_integer_choice (2) end
+            create l_command
+            create l_application.make_single_command ("choice", l_command)
+            l_help := l_application.command_help ("")
+            check
+                inherited_modes: l_command.Case_sensitive and not l_command.Case_insensitive
+                help_order: l_help.has_substring ("choices: -1, 3")
+                help_strings: l_help.has_substring ("choices: %"JSON%", %"yaml%"")
+                help_comparison: l_help.has_substring ("(case insensitive)")
+                help_default: l_help.has_substring ("default: %"Auto%"")
+                help_alias: l_help.has_substring ("-m, --mode")
+            end
+        end
+
 
     test_values
         local

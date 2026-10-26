@@ -63,6 +63,51 @@ the corresponding type. Use `has_parameter` or a type-specific `has_*_parameter`
 query when checking for a value. String and list queries return copies, so
 changing the returned data does not change the stored input.
 
+## Choices
+
+Scalar arguments and options can restrict values to a declared set. Declare them
+inside a `CLI_COMMAND` descendant using separate choice procedures:
+
+```eiffel
+add_string_choice_option ("format", "Output format",
+    {ARRAY [STRING_32]} <<"JSON", "yaml", "text">>, Case_insensitive)
+add_optional_integer_choice_option ("level", "Compression level",
+    {ARRAY [INTEGER]} <<0, 3, 6, 9>>, 6)
+```
+
+`Case_sensitive = True` and `Case_insensitive = False` are inherited Boolean
+constants available inside every command. Pass one explicitly for string choices.
+The handler uses ordinary `string_parameter` and `integer_parameter` queries.
+For example, `--format=json` returns the declared spelling `JSON`.
+
+| Procedure | Arguments after name and description |
+|---|---|
+| `add_integer_choice_argument`, `add_integer_choice_option` | `a_choices: ITERABLE [INTEGER]` |
+| `add_optional_integer_choice_argument`, `add_optional_integer_choice_option` | `a_choices: ITERABLE [INTEGER]; a_default: INTEGER` |
+| `add_string_choice_argument`, `add_string_choice_option` | `a_choices: ITERABLE [READABLE_STRING_32]; a_case_sensitive: BOOLEAN` |
+| `add_optional_string_choice_argument`, `add_optional_string_choice_option` | `a_choices: ITERABLE [READABLE_STRING_32]; a_case_sensitive: BOOLEAN; a_default: READABLE_STRING_32` |
+
+Sets must be nonempty and contain no duplicates under the selected comparison.
+Defaults must match a declared value; string defaults use the same comparison and
+are stored in declared spelling. These are declaration preconditions, separate
+from errors in user input. Empty strings are valid choices. Choice definitions
+snapshot the collection and its strings, preserving declaration order. Changes
+to the caller's data do not affect parsing or help.
+
+`are_valid_integer_choices`, `are_valid_string_choices`, `has_integer_choice`, and
+`has_string_choice` allow callers to check these obligations before declaring a
+parameter. These queries and comparison constants come from `CLI_CHOICE_ROUTINES`,
+inherited by both `CLI_COMMAND` and `CLI_PARAMETER`.
+
+Direct parser users create definitions with the corresponding
+`CLI_PARAMETER.make_*_choice_*` procedures using the same argument order.
+`has_choices` identifies a restricted parameter; `choices_text` returns a fresh
+ordered display. String matching uses the common ELKS
+`READABLE_STRING_32.is_case_insensitive_equal` operation in insensitive mode.
+This comparison is independent of system locale and does not perform Unicode
+normalization or full case folding (for example, `ß` and `ss` remain distinct).
+See [choice syntax](syntax.md#choices) for token handling and errors.
+
 ## Applications
 
 `CLI_APPLICATION.make` takes the application name and description. Register each

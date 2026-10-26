@@ -283,6 +283,9 @@ feature {NONE} -- Implementation
                 if a_parameter.value_type = a_parameter.Integer_type then
                     if not l_token.is_integer_32 then
                         fail ({STRING_32} "Invalid integer for " + a_parameter.name + ": " + l_token)
+                    elseif a_parameter.has_choices and then not a_parameter.accepts_integer_choice (l_token.to_integer_32) then
+                        fail ({STRING_32} "Invalid choice for " + a_parameter.name + ": " + l_token +
+                            "; expected one of: " + a_parameter.choices_text)
                     elseif a_parameter.is_multiple then
                         if parsed_values.has_parameter (a_parameter.name) then
                             parsed_values.append_integer (a_parameter.name, l_token.to_integer_32)
@@ -291,6 +294,13 @@ feature {NONE} -- Implementation
                         end
                     else
                         parsed_values.put_integer (a_parameter.name, l_token.to_integer_32)
+                    end
+                elseif a_parameter.has_choices then
+                    if attached a_parameter.matching_string_choice (l_token) as l_choice then
+                        parsed_values.put_string (a_parameter.name, l_choice)
+                    else
+                        fail ({STRING_32} "Invalid choice for " + a_parameter.name + ": " + l_token +
+                            "; expected one of: " + a_parameter.choices_text)
                     end
                 elseif a_parameter.is_multiple then
                     if parsed_values.has_parameter (a_parameter.name) then

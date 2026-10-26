@@ -53,6 +53,11 @@ def arc_read_output(command, archive, tree=None, password_set=False):
 
 
 CASES = [
+    ("cli_tests", ["choices", "3", "json", "--number=1", "-m", "Fast"], 0, "JSON\nAuto\n", ""),
+    ("cli_tests", ["choices", "3", "YAML", "--number=3", "-m=fast", "--color=NEVER"], 0, "yaml\nNever\n", ""),
+    ("cli_tests", ["choices", "3", "xml", "--help"], 2, "", 'Invalid choice for format: xml; expected one of: "JSON", "yaml"'),
+    ("cli_tests", ["choices", "3", "json", "--number=2"], 2, "", "Invalid choice for number: 2; expected one of: 1, 3"),
+    ("cli_tests", ["choices", "3", "json", "--number=1", "-m=FAST"], 2, "", 'Invalid choice for mode: FAST; expected one of: "Fast", "fast"'),
     ("greet", [], 0, "Hello, world!\n", ""),
     ("greet", ["Alice", "--prefix", "Hi"], 0, "Hi, Alice!\n", ""),
     ("greet", ["Alice", "--prefix", ""], 0, ", Alice!\n", ""),
@@ -259,6 +264,7 @@ CASES += [
 ]
 
 HELP_CASES = [
+    ("cli_tests", ["choices", "--help"], "routing - Choice fixture"),
     ("cli_tests", ["automatic-immutable", "--help"], "routing - "),
     ("arc", ["help"], "arc - "),
     ("cli_tests", ["automatic", "--help", "--unknown"], "routing - "),
@@ -283,6 +289,18 @@ HELP_CASES = [
     ("arc", ["list", "tree", "--help"], "arc list tree - "),
     ("cli_tests", ["route", "help", "remote", "add"], "routing remote add - "),
     ("arc", ["help", "list", "tree"], "arc list tree - "),
+]
+
+
+CONTRACT_CASES = [
+    ("empty-integer", "valid_choices"),
+    ("duplicate-integer", "valid_choices"),
+    ("empty-string", "valid_choices"),
+    ("duplicate-string", "valid_choices"),
+    ("case-collision", "valid_choices"),
+    ("integer-default", "valid_default"),
+    ("string-default", "valid_default"),
+    ("sensitive-default", "valid_default"),
 ]
 
 
@@ -329,7 +347,13 @@ def main():
             if name == "arc" and "pack" in tokens:
                 for fragment in ("<archive>", "--format", "--password", "-h, --help"):
                     assert fragment in result.stdout, (compiler, fragment, result)
-        print(f"{compiler}: {len(CASES) + len(HELP_CASES)} checks passed")
+        for case, assertion in CONTRACT_CASES:
+            result = subprocess.run(
+                [str(executable_path("cli_tests", compiler)), f"invalid-choice-{case}"],
+                capture_output=True, text=True, timeout=10,
+            )
+            assert result.returncode != 0 and assertion in result.stderr, (compiler, case, result)
+        print(f"{compiler}: {len(CASES) + len(HELP_CASES) + len(CONTRACT_CASES)} checks passed")
 
 
 if __name__ == "__main__":

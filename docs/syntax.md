@@ -137,6 +137,33 @@ Negative positional integers require the separator: `tool -- -3`. Negative optio
 values require an inline form: `tool --count=-3` or `tool -n=-3`. No special numeric-alias
 or negative-number recognition is performed.
 
+## Choices
+
+A scalar integer or string argument or option may restrict values to declared
+choices. Token recognition, short aliases, repetition, and required-parameter
+rules remain the same as for ordinary scalar parameters. Integer conversion
+precedes membership checking: `--level=+3` matches the integer choice `3`.
+Malformed or overflowing integers report an invalid-integer error; an integer
+outside the set reports an invalid-choice error. Negative choices still require
+inline option values or the positional separator.
+
+String choices use exact comparison with `Case_sensitive`, or ELKS character-case
+comparison with `Case_insensitive`. Insensitive matching returns the declared
+spelling for both explicit values and defaults. It does not trim whitespace,
+normalize Unicode, or perform full Unicode case folding. Empty strings match only
+an explicitly declared empty choice. Choice lists cannot be empty or contain
+duplicates under the selected comparison, and defaults must belong to the set.
+
+Help lists choices in declaration order, quotes string choices, and marks
+insensitive comparison. Invalid input reports the parameter, rejected value, and
+allowed choices, for example:
+
+```text
+Invalid choice for format: xml; expected one of: "JSON", "yaml", "text"
+```
+
+Choices apply to scalar parameters; list parameters retain their existing behavior.
+
 ## Defaults and completion
 
 The parser first stores explicit values. At end of input it checks missing
@@ -144,7 +171,7 @@ required parameters and adds defaults for absent optional parameters. The first
 explicit list value replaces its entire default; subsequent values append.
 Flags default to `False` and become `True` when present.
 
-A pending option without a value, a missing required parameter, an invalid type,
+A pending option without a value, a missing required parameter, an invalid type or choice,
 an unknown option, a forbidden repetition, or an unexpected positional value makes
 the whole parse fail. The parser exposes a complete `CLI_COMMAND_INPUT` only on
 success. A flag named `help` has no effect on these rules. Applications report
