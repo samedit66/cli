@@ -108,6 +108,55 @@ This comparison is independent of system locale and does not perform Unicode
 normalization or full case folding (for example, `ß` and `ss` remain distinct).
 See [choice syntax](syntax.md#choices) for token handling and errors.
 
+## Value validators
+
+A parameter can have one predicate for its complete typed value. Set it after
+adding the parameter, inside `interface`:
+
+```eiffel
+add_integer_option ("count", "Number of repetitions")
+set_integer_validator ("count", agent is_positive, "Must be greater than zero")
+```
+
+The command supplies a query such as:
+
+```eiffel
+is_positive (a_value: INTEGER): BOOLEAN
+    do
+        Result := a_value > 0
+    end
+```
+
+| Setter | Predicate type |
+|---|---|
+| `set_integer_validator` | `FUNCTION [TUPLE [INTEGER], BOOLEAN]` |
+| `set_string_validator` | `FUNCTION [TUPLE [READABLE_STRING_32], BOOLEAN]` |
+| `set_integer_list_validator` | `FUNCTION [TUPLE [ARRAYED_LIST [INTEGER]], BOOLEAN]` |
+| `set_string_list_validator` | `FUNCTION [TUPLE [ARRAYED_LIST [STRING_32]], BOOLEAN]` |
+
+Each setter takes the parameter name, predicate, and nonempty failure message.
+Scalar setters accept only scalar parameters; list setters accept only lists.
+A list predicate checks the entire collection, including its size, order, or
+individual elements as needed. There is no separate element validator.
+Flags and help actions do not support validators. A second assignment is invalid.
+
+Predicates must accept every value of their input type, have no side effects,
+and return a stable result independent of mutable external state. They are
+retained as agents. Strings and lists passed during validation are independent
+copies, including copies of string-list elements. Failure messages are snapshotted.
+
+Defaults must satisfy the proposed predicate before installation; this is a
+setter precondition. `can_set_*_validator (name, predicate)` queries expose these
+obligations. Direct parser clients use the same setters and queries on
+`CLI_PARAMETER`, omitting the name argument. `has_validator`,
+`is_valid_*_value`, and `validator_message` expose the configured rule.
+
+After parsing, choices, required-value checks, and defaults, predicates run in
+declaration order until the first failure. String choices reach the predicate in
+canonical declared spelling. A rejected value reports
+`Invalid value for NAME: MESSAGE`; the handler is not called. Help bypasses this
+final validation. Use handler validation for relationships between parameters.
+
 ## Applications
 
 `CLI_APPLICATION.make` takes the application name and description. Register each

@@ -27,6 +27,7 @@ feature {NONE} -- Entry point
                 test_definition_validation
                 test_values
                 test_choices
+                test_validators
                 test_inline_values
                 test_failures
                 test_token_ownership
@@ -81,6 +82,128 @@ feature {NONE} -- Entry point
         end
 
 feature {NONE} -- Parser tests
+
+    test_validators
+            -- Validate complete scalar and list values, defaults, choices, and help.
+        local
+            p, h: CLI_PARAMETER
+            parser: CLI_PARSER
+            command: ROUTING_COMMAND
+        do
+            create p.make_optional_integer_option ("value", "Value", 1)
+            check installable_integer: p.can_set_integer_validator (agent positive) end
+            p.set_integer_validator (agent positive, "Rejected")
+            check single_validator_integer: not p.can_set_integer_validator (agent positive) end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<"--value=2">>)
+            check accepted_integer: parser.is_successful end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<"--value=0">>)
+            check rejected_integer: parser.has_error and then parser.error_message.same_string ("Invalid value for value: Rejected") end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<>>)
+            check default_integer: parser.is_successful end
+            create p.make_optional_string_option ("value", "Value", "ok")
+            check installable_string: p.can_set_string_validator (agent nonempty) end
+            p.set_string_validator (agent nonempty, "Rejected")
+            check single_validator_string: not p.can_set_string_validator (agent nonempty) end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<"--value=ok">>)
+            check accepted_string: parser.is_successful end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<"--value=">>)
+            check rejected_string: parser.has_error and then parser.error_message.same_string ("Invalid value for value: Rejected") end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<>>)
+            check default_string: parser.is_successful end
+            create p.make_optional_integer_list_option ("value", "Value", {ARRAY [INTEGER]} <<1, 2>>)
+            check installable_integer_list: p.can_set_integer_list_validator (agent two_integers) end
+            p.set_integer_list_validator (agent two_integers, "Rejected")
+            check single_validator_integer_list: not p.can_set_integer_list_validator (agent two_integers) end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<"--value=1", "--value=2">>)
+            check accepted_integer_list: parser.is_successful end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<"--value=1">>)
+            check rejected_integer_list: parser.has_error and then parser.error_message.same_string ("Invalid value for value: Rejected") end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<>>)
+            check default_integer_list: parser.is_successful end
+            create p.make_optional_string_list_option ("value", "Value", {ARRAY [STRING_32]} <<"a", "b">>)
+            check installable_string_list: p.can_set_string_list_validator (agent two_strings) end
+            p.set_string_list_validator (agent two_strings, "Rejected")
+            check single_validator_string_list: not p.can_set_string_list_validator (agent two_strings) end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<"--value=a", "--value=b">>)
+            check accepted_string_list: parser.is_successful end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<"--value=a">>)
+            check rejected_string_list: parser.has_error and then parser.error_message.same_string ("Invalid value for value: Rejected") end
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<>>)
+            check default_string_list: parser.is_successful end
+            create command.make ("validated")
+            command.add_integer_option ("number", "Number")
+            command.set_integer_validator ("number", agent positive, "Positive required")
+            check command_single_assignment: not command.can_set_integer_validator ("number", agent positive) end
+            command.add_string_option ("text", "Text")
+            command.set_string_validator ("text", agent nonempty, "Text required")
+            command.add_integer_list_option ("numbers", "Numbers")
+            command.set_integer_list_validator ("numbers", agent two_integers, "Two required")
+            command.add_string_list_option ("texts", "Texts")
+            command.set_string_list_validator ("texts", agent two_strings, "Two required")
+            create p.make_optional_string_option ("value", "Value", "")
+            check invalid_string_default: not p.can_set_string_validator (agent nonempty) end
+            create p.make_optional_integer_list_option ("value", "Value", {ARRAY [INTEGER]} <<>>)
+            check invalid_integer_list_default: not p.can_set_integer_list_validator (agent two_integers) end
+            check scalar_rejects_list: not p.can_set_integer_validator (agent positive) end
+            create p.make_optional_string_list_option ("value", "Value", {ARRAY [STRING_32]} <<>>)
+            check invalid_string_list_default: not p.can_set_string_list_validator (agent two_strings) end
+            create p.make_optional_integer_option ("value", "Value", 0)
+            check invalid_default: not p.can_set_integer_validator (agent positive) end
+            check wrong_type: not p.can_set_string_validator (agent nonempty) end
+            create p.make_string_choice_option ("value", "Value", {ARRAY [STRING_32]} <<"OK">>, False)
+            p.set_string_validator (agent canonical_ok, "Expected canonical spelling")
+            create parser.make (<<p>>)
+            parser.parse ({ARRAY [STRING_32]} <<"--value=ok">>)
+            check canonicalized: parser.is_successful end
+            create p.make_integer_option ("value", "Value")
+            p.set_integer_validator (agent positive, "Positive required")
+            create h.make_help
+            create parser.make (<<p, h>>)
+            parser.parse ({ARRAY [STRING_32]} <<"--value=0", "--help">>)
+            check help_bypasses_validator: parser.help_requested end
+        end
+
+    positive (a_value: INTEGER): BOOLEAN
+            -- Is the number positive?
+        do
+            Result := a_value > 0
+        end
+
+    nonempty (a_value: READABLE_STRING_32): BOOLEAN
+            -- Is the text nonempty?
+        do
+            Result := not a_value.is_empty
+        end
+
+    canonical_ok (a_value: READABLE_STRING_32): BOOLEAN
+            -- Does the value have canonical spelling?
+        do
+            Result := a_value.same_string ("OK")
+        end
+
+    two_integers (a_values: ARRAYED_LIST [INTEGER]): BOOLEAN
+            -- Are there exactly two numbers?
+        do
+            Result := a_values.count = 2
+        end
+
+    two_strings (a_values: ARRAYED_LIST [STRING_32]): BOOLEAN
+            -- Are there exactly two strings?
+        do
+            Result := a_values.count = 2
+        end
 
     test_command_names
         local

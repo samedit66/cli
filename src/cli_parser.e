@@ -178,7 +178,10 @@ feature -- Parsing
                 end
             end
             if not has_error and then not help_requested then
-                outcome := Success
+                validate_values
+                if not has_error then
+                    outcome := Success
+                end
             end
         ensure
             parsed: is_parsed
@@ -333,6 +336,31 @@ feature {NONE} -- Implementation
                         parsed_values.put_integer (p.name, p.integer_default)
                     else
                         parsed_values.put_string (p.name, p.string_default)
+                    end
+                end
+            end
+        end
+
+    validate_values
+            -- Validate complete values, including defaults, before publishing success.
+        local
+            l_valid: BOOLEAN
+        do
+            across parameters as p loop
+                if not has_error and then p.has_validator then
+                    if p.is_multiple then
+                        if p.value_type = p.Integer_type then
+                            l_valid := p.is_valid_integer_list_value (parsed_values.integer_list_parameter (p.name))
+                        else
+                            l_valid := p.is_valid_string_list_value (parsed_values.string_list_parameter (p.name))
+                        end
+                    elseif p.value_type = p.Integer_type then
+                        l_valid := p.is_valid_integer_value (parsed_values.integer_parameter (p.name))
+                    else
+                        l_valid := p.is_valid_string_value (parsed_values.string_parameter (p.name))
+                    end
+                    if not l_valid then
+                        fail ({STRING_32} "Invalid value for " + p.name + ": " + p.validator_message)
                     end
                 end
             end

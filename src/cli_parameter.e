@@ -370,7 +370,155 @@ feature {NONE} -- Metadata initialization
             create name.make_from_string (a_name)
             create description.make_from_string (a_description)
             create string_default.make_from_string (a_string_default)
+            create validator_message.make_empty
             action := Store_action
+        end
+
+feature -- Value validators
+
+    can_set_integer_validator (a_validator: FUNCTION [TUPLE [INTEGER], BOOLEAN]): BOOLEAN
+            -- Can this predicate validate this parameter and its default?
+        do
+            Result := action = Store_action and then value_type = Integer_type and then
+                not is_multiple and then not has_validator and then
+                (not is_optional or else a_validator.item ([integer_default]))
+        end
+
+    set_integer_validator (a_validator: FUNCTION [TUPLE [INTEGER], BOOLEAN]; a_message: READABLE_STRING_32)
+            -- Retain a pure predicate and snapshot its failure message.
+        require
+            assignable: can_set_integer_validator (a_validator)
+            meaningful_message: not a_message.is_empty
+        do
+            integer_validator := a_validator
+            create validator_message.make_from_string (a_message)
+        ensure
+            installed: has_validator
+        end
+
+    is_valid_integer_value (a_value: INTEGER): BOOLEAN
+            -- Does a copy of this value satisfy the predicate, if any?
+        do
+            Result := True
+            if attached integer_validator as v then
+                Result := v.item ([a_value])
+            end
+        end
+
+    can_set_string_validator (a_validator: FUNCTION [TUPLE [READABLE_STRING_32], BOOLEAN]): BOOLEAN
+            -- Can this predicate validate this parameter and its default?
+        do
+            Result := action = Store_action and then value_type = String_type and then
+                not is_multiple and then not has_validator and then
+                (not is_optional or else a_validator.item ([string_default.to_string_32.twin]))
+        end
+
+    set_string_validator (a_validator: FUNCTION [TUPLE [READABLE_STRING_32], BOOLEAN]; a_message: READABLE_STRING_32)
+            -- Retain a pure predicate and snapshot its failure message.
+        require
+            assignable: can_set_string_validator (a_validator)
+            meaningful_message: not a_message.is_empty
+        do
+            string_validator := a_validator
+            create validator_message.make_from_string (a_message)
+        ensure
+            installed: has_validator
+        end
+
+    is_valid_string_value (a_value: READABLE_STRING_32): BOOLEAN
+            -- Does a copy of this value satisfy the predicate, if any?
+        do
+            Result := True
+            if attached string_validator as v then
+                Result := v.item ([a_value.to_string_32.twin])
+            end
+        end
+
+    can_set_integer_list_validator (a_validator: FUNCTION [TUPLE [ARRAYED_LIST [INTEGER]], BOOLEAN]): BOOLEAN
+            -- Can this predicate validate this parameter and its default?
+        do
+            Result := action = Store_action and then value_type = Integer_type and then
+                is_multiple and then not has_validator and then
+                (not is_optional or else a_validator.item ([integer_list_default]))
+        end
+
+    set_integer_list_validator (a_validator: FUNCTION [TUPLE [ARRAYED_LIST [INTEGER]], BOOLEAN]; a_message: READABLE_STRING_32)
+            -- Retain a pure predicate and snapshot its failure message.
+        require
+            assignable: can_set_integer_list_validator (a_validator)
+            meaningful_message: not a_message.is_empty
+        do
+            integer_list_validator := a_validator
+            create validator_message.make_from_string (a_message)
+        ensure
+            installed: has_validator
+        end
+
+    is_valid_integer_list_value (a_value: ARRAYED_LIST [INTEGER]): BOOLEAN
+            -- Does a copy of this value satisfy the predicate, if any?
+        do
+            Result := True
+            if attached integer_list_validator as v then
+                Result := v.item ([a_value.twin])
+            end
+        end
+
+    can_set_string_list_validator (a_validator: FUNCTION [TUPLE [ARRAYED_LIST [STRING_32]], BOOLEAN]): BOOLEAN
+            -- Can this predicate validate this parameter and its default?
+        do
+            Result := action = Store_action and then value_type = String_type and then
+                is_multiple and then not has_validator and then
+                (not is_optional or else a_validator.item ([string_list_default]))
+        end
+
+    set_string_list_validator (a_validator: FUNCTION [TUPLE [ARRAYED_LIST [STRING_32]], BOOLEAN]; a_message: READABLE_STRING_32)
+            -- Retain a pure predicate and snapshot its failure message.
+        require
+            assignable: can_set_string_list_validator (a_validator)
+            meaningful_message: not a_message.is_empty
+        do
+            string_list_validator := a_validator
+            create validator_message.make_from_string (a_message)
+        ensure
+            installed: has_validator
+        end
+
+    is_valid_string_list_value (a_value: ARRAYED_LIST [STRING_32]): BOOLEAN
+            -- Does a copy of this value satisfy the predicate, if any?
+        do
+            Result := True
+            if attached string_list_validator as v then
+                Result := v.item ([copied_strings (a_value)])
+            end
+        end
+
+    has_validator: BOOLEAN
+            -- Is a value predicate installed?
+        do
+            Result := integer_validator /= Void or string_validator /= Void or
+                integer_list_validator /= Void or string_list_validator /= Void
+        end
+
+    validator_message: IMMUTABLE_STRING_32
+            -- Diagnostic for a rejected value; empty until a validator is installed.
+
+feature {NONE} -- Validator implementation
+
+    integer_validator: detachable FUNCTION [TUPLE [INTEGER], BOOLEAN]
+
+    string_validator: detachable FUNCTION [TUPLE [READABLE_STRING_32], BOOLEAN]
+
+    integer_list_validator: detachable FUNCTION [TUPLE [ARRAYED_LIST [INTEGER]], BOOLEAN]
+
+    string_list_validator: detachable FUNCTION [TUPLE [ARRAYED_LIST [STRING_32]], BOOLEAN]
+
+    copied_strings (a_values: ARRAYED_LIST [STRING_32]): ARRAYED_LIST [STRING_32]
+            -- Independent copy of the list and its strings.
+        do
+            create Result.make (a_values.count)
+            across a_values as v loop
+                Result.extend (v.twin)
+            end
         end
 
 feature -- Validation

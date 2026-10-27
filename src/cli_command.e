@@ -422,6 +422,88 @@ feature -- Flags
             register_parameter (l_parameter)
         end
 
+feature -- Value validators
+
+    can_set_integer_validator (a_name: READABLE_STRING_32; a_validator: FUNCTION [TUPLE [INTEGER], BOOLEAN]): BOOLEAN
+            -- Can the named parameter receive this predicate?
+        do
+            Result := across parameters as p some
+                p.name.same_string (a_name) and then p.can_set_integer_validator (a_validator) end
+        end
+
+    set_integer_validator (a_name: READABLE_STRING_32; a_validator: FUNCTION [TUPLE [INTEGER], BOOLEAN]; a_message: READABLE_STRING_32)
+            -- Set the named parameter's pure final-value predicate and diagnostic.
+        require
+            assignable: can_set_integer_validator (a_name, a_validator)
+            meaningful_message: not a_message.is_empty
+        do
+            across parameters as p loop
+                if p.name.same_string (a_name) then
+                    p.set_integer_validator (a_validator, a_message)
+                end
+            end
+        end
+
+    can_set_string_validator (a_name: READABLE_STRING_32; a_validator: FUNCTION [TUPLE [READABLE_STRING_32], BOOLEAN]): BOOLEAN
+            -- Can the named parameter receive this predicate?
+        do
+            Result := across parameters as p some
+                p.name.same_string (a_name) and then p.can_set_string_validator (a_validator) end
+        end
+
+    set_string_validator (a_name: READABLE_STRING_32; a_validator: FUNCTION [TUPLE [READABLE_STRING_32], BOOLEAN]; a_message: READABLE_STRING_32)
+            -- Set the named parameter's pure final-value predicate and diagnostic.
+        require
+            assignable: can_set_string_validator (a_name, a_validator)
+            meaningful_message: not a_message.is_empty
+        do
+            across parameters as p loop
+                if p.name.same_string (a_name) then
+                    p.set_string_validator (a_validator, a_message)
+                end
+            end
+        end
+
+    can_set_integer_list_validator (a_name: READABLE_STRING_32; a_validator: FUNCTION [TUPLE [ARRAYED_LIST [INTEGER]], BOOLEAN]): BOOLEAN
+            -- Can the named parameter receive this predicate?
+        do
+            Result := across parameters as p some
+                p.name.same_string (a_name) and then p.can_set_integer_list_validator (a_validator) end
+        end
+
+    set_integer_list_validator (a_name: READABLE_STRING_32; a_validator: FUNCTION [TUPLE [ARRAYED_LIST [INTEGER]], BOOLEAN]; a_message: READABLE_STRING_32)
+            -- Set the named parameter's pure final-value predicate and diagnostic.
+        require
+            assignable: can_set_integer_list_validator (a_name, a_validator)
+            meaningful_message: not a_message.is_empty
+        do
+            across parameters as p loop
+                if p.name.same_string (a_name) then
+                    p.set_integer_list_validator (a_validator, a_message)
+                end
+            end
+        end
+
+    can_set_string_list_validator (a_name: READABLE_STRING_32; a_validator: FUNCTION [TUPLE [ARRAYED_LIST [STRING_32]], BOOLEAN]): BOOLEAN
+            -- Can the named parameter receive this predicate?
+        do
+            Result := across parameters as p some
+                p.name.same_string (a_name) and then p.can_set_string_list_validator (a_validator) end
+        end
+
+    set_string_list_validator (a_name: READABLE_STRING_32; a_validator: FUNCTION [TUPLE [ARRAYED_LIST [STRING_32]], BOOLEAN]; a_message: READABLE_STRING_32)
+            -- Set the named parameter's pure final-value predicate and diagnostic.
+        require
+            assignable: can_set_string_list_validator (a_name, a_validator)
+            meaningful_message: not a_message.is_empty
+        do
+            across parameters as p loop
+                if p.name.same_string (a_name) then
+                    p.set_string_list_validator (a_validator, a_message)
+                end
+            end
+        end
+
 feature -- Short names
 
     set_short_name (

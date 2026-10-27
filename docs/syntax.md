@@ -176,3 +176,13 @@ an unknown option, a forbidden repetition, or an unexpected positional value mak
 the whole parse fail. The parser exposes a complete `CLI_COMMAND_INPUT` only on
 success. A flag named `help` has no effect on these rules. Applications report
 invalid input with exit code `2`; see [error handling](usage.md#errors).
+
+## Value validation
+
+Optional value predicates run after token parsing, choice matching, required
+parameter checks, and default insertion. Each parameter has at most one predicate
+for its complete typed value; list predicates receive the whole list. Defaults
+must also satisfy the predicate. Predicates run in declaration order and stop at
+the first rejection, reported as `Invalid value for NAME: MESSAGE`. No handler is
+called on failure. Automatic help bypasses value predicates. See
+[value validators](usage.md#value-validators) for declarations and agent contracts.
